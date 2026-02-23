@@ -1,0 +1,107 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "PlatformIO",
+            "task": "Full Clean",
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "label": "PlatformIO: Full Clean"
+        },
+        {
+            "type": "PlatformIO",
+            "task": "Build",
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "group": "build",
+            "label": "PlatformIO: Build"
+        },
+        {
+            "type": "PlatformIO",
+            "task": "Build (esp32_4m)",
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "group": "build",
+            "label": "PlatformIO: Build (esp32_4m)"
+        },
+        {
+            "type": "PlatformIO",
+            "task": "Build (esp32_8m)",
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "group": "build",
+            "label": "PlatformIO: Build (esp32_8m)"
+        },
+        {
+            "type": "PlatformIO",
+            "task": "Upload (esp32_4m)",
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "label": "PlatformIO: Upload (esp32_4m)"
+        },
+        {
+            "type": "PlatformIO",
+            "task": "Build (d1_mini_4m)",
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "group": "build",
+            "label": "PlatformIO: Build (d1_mini_4m)"
+        },
+        {
+            "type": "PlatformIO",
+            "task": "Build (d1_mini_8m)",
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "group": "build",
+            "label": "PlatformIO: Build (d1_mini_4m)"
+        },
+        {
+            "type": "PlatformIO",
+            "task": "Upload (d1_mini_4m)",
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "label": "PlatformIO: Upload (d1_mini_4m)"
+        },
+        {
+            "type": "PlatformIO",
+            "task": "Monitor (d1_mini_4m)",
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "label": "PlatformIO: Monitor (d1_mini_4m)"
+        },
+        {
+            "type": "PlatformIO",
+            "task": "Erase Flash (d1_mini_4m)",
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "label": "PlatformIO: Erase Flash (d1_mini_4m)"
+        },
+        {
+            "type": "PlatformIO",
+            "task": "Monitor (esp32_4m)",
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "label": "PlatformIO: Monitor (esp32_4m)"
+        },
+        {
+            "type": "PlatformIO",
+            "task": "Build (nodemcu_4m)",
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "group": "build",
+            "label": "PlatformIO: Build (nodemcu_4m)"
+        }
+    ]
+}

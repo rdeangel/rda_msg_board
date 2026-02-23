@@ -1,0 +1,122 @@
+name: Build Firmware
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger only on version tags like v2026.01.04
+  workflow_dispatch:  # Allow manual trigger
+
+permissions:
+  contents: write  # Required to create releases and upload assets
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - environment: nodemcu_4m
+            modules: 4m
+            platform: esp8266
+          - environment: nodemcu_8m
+            modules: 8m
+            platform: esp8266
+          - environment: d1_mini_4m
+            modules: 4m
+            platform: esp8266
+          - environment: d1_mini_8m
+            modules: 8m
+            platform: esp8266
+          - environment: esp32_4m
+            modules: 4m
+            platform: esp32
+          - environment: esp32_8m
+            modules: 8m
+            platform: esp32
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from platformio.ini
+        id: version
+        run: |
+          VERSION=$(grep -E "^version\s*=" platformio.ini | sed 's/.*=\s*//' | tr -d ' \r')
+          PROJECT_NAME=$(grep -E "^project_name\s*=" platformio.ini | sed 's/.*=\s*//' | tr -d ' \r')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_OUTPUT
+          echo "Extracted: $PROJECT_NAME $VERSION"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      - name: Build firmware
+        run: platformio run --environment ${{ matrix.environment }}
+
+      - name: Rename firmware
+        run: |
+          mkdir -p artifacts
+          cp .pio/build/${{ matrix.environment }}/firmware.bin \
+             artifacts/${{ steps.version.outputs.PROJECT_NAME }}_${{ matrix.environment }}_${{ steps.version.outputs.VERSION }}.bin
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.environment }}
+          path: artifacts/*.bin
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history to read tag messages
+
+      - name: Extract release notes from CHANGELOG.md
+        id: tag_notes
+        run: |
+          VERSION="${{ github.ref_name }}"
+
+          # Extract the section for this version from CHANGELOG.md
+          # Matches from "## [vX.Y.Z]" up to the next "## [" heading
+          awk "/^## \[${VERSION}\]/{found=1; next} /^## \[/{if(found) exit} found{print}" CHANGELOG.md \
+            | sed '/^[[:space:]]*$/d;/^$/d' \
+            > /tmp/release_notes.md || true
+
+          # Fall back if nothing extracted
+          if [ ! -s /tmp/release_notes.md ]; then
+            echo "Release ${VERSION}" > /tmp/release_notes.md
+          fi
+
+          echo "Release notes: $(wc -l < /tmp/release_notes.md) lines"
+          cat /tmp/release_notes.md
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.bin
+          body_path: /tmp/release_notes.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

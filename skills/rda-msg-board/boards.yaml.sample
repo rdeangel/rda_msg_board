@@ -1,0 +1,16 @@
+# Board Profiles Configuration Example
+# Copy this file to boards.yaml and customize with your actual device details
+
+profiles:
+  # Example profile - replace with your actual board details
+  # Uncomment and customize:
+  # myboard:
+  #   ip: "192.168.1.100"    # Your MSG Board IP address
+  #   user: "admin"              # Web interface username
+  #   pass: "msgboard"           # Web interface password
+
+  # Add more profiles as needed for multiple boards
+  # office:
+  #   ip: "10.0.0.50"
+  #   user: "admin"
+  #   pass: "secure123"
