@@ -294,16 +294,33 @@ if git rev-parse "$VERSION" >/dev/null 2>&1; then
         print_warning "Use --force to recreate the tag and trigger a new release"
         echo ""
 
+        # Check that local branch is not behind any remote before committing
+        if [ "$DRY_RUN" = false ]; then
+            for remote in "${REMOTES[@]}"; do
+                git fetch "$remote" main 2>/dev/null || true
+                LOCAL=$(git rev-parse HEAD)
+                REMOTE_REF=$(git rev-parse "$remote/main" 2>/dev/null || echo "")
+                if [ -n "$REMOTE_REF" ] && [ "$LOCAL" != "$REMOTE_REF" ]; then
+                    BEHIND=$(git rev-list --count HEAD.."$remote/main" 2>/dev/null || echo "0")
+                    if [ "$BEHIND" -gt 0 ]; then
+                        print_error "Local branch is ${BEHIND} commit(s) behind ${remote}/main"
+                        print_error "Run: git pull --rebase ${remote} main  — then re-run release.sh"
+                        exit 1
+                    fi
+                fi
+            done
+        fi
+
         git add .
         if git commit -m "$COMMIT_MESSAGE"; then
             print_success "Changes committed"
-            if [ "$DRY_RUN" = false ]; then
-                push_all
-            else
-                print_status "[dry-run] Would push to: ${REMOTES[*]}"
-            fi
         else
-            print_status "Nothing to commit"
+            print_status "Nothing to commit — pushing existing commits"
+        fi
+        if [ "$DRY_RUN" = false ]; then
+            push_all
+        else
+            print_status "[dry-run] Would push to: ${REMOTES[*]}"
         fi
 
     else

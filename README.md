@@ -1,5 +1,5 @@
 # RDA MSG Board
-TEST
+
 A WiFi-enabled LED matrix message board system for ESP8266 and ESP32 microcontrollers that displays scrolling messages from remote systems or users via HTTP, MQTT, or a built-in web interface. Designed for home automation integration with Home Assistant, NodeRed, Linux/Windows systems, and direct browser access.
 
 ## Overview
@@ -14,7 +14,6 @@ Originally developed for Aduino IDE at [esp8266_max7219_rda_msg_board](https://g
 
 > [!NOTE]
 > For a full visual tour of all the settings and configuration pages available in the web interface, please see the **[UI Overview Guide](docs/UI_OVERVIEW.md)**.
-
 
 ## Key Features
 
@@ -58,7 +57,6 @@ Originally developed for Aduino IDE at [esp8266_max7219_rda_msg_board](https://g
 - **Buzzer**: Optional piezo buzzer for audible notifications ([example here](https://www.amazon.co.uk/dp/B09RG8H7Q7)
 QWORK® 8 Pcs Electronic buzzer , 3-24V piezoelectric buzzer 87dB , for physical circuits continuous sound electronic buzzer alarm , cable length 100mm)
 - **Power Supply**: 5V DC (USB or external). Multiple modules require a high-current power source.
-- **Flash Button**: Optional FLASH button for factory reset (GPIO0) when enabled.
 
 ## Pin Configuration
 
@@ -129,7 +127,9 @@ In `platformio.ini`, you can uncomment any of the following definitions under yo
 ```
 
 > [!NOTE]
-> **Important Note for ESP8266 Users:** The Weather feature is deliberately disabled by default (`-DDISABLE_WEATHER_FEATURE`) on all ESP8266 environments. The ESP8266 does not have enough available heap memory to safely parse the large OpenWeatherMap JSON payloads while supporting all other framework features (WiFi, web server, etc). Trying to enable it will likely result in out-of-memory crashes. Because of these constraints, future large features will likely only be developed for the ESP32 platform.
+```markdown
+> **Important Note for ESP8266 Users:** Enabling the Weather feature on ESP8266 will make WiFi setup (Captive Portal) unreliable; you will likely not be able to scan for or enter the WiFi SSID. For this reason, it is disabled by default (`-DDISABLE_WEATHER_FEATURE`). You can upload firmware with Weather enabled *after* WiFi is configured and it will work fine, but if you need to reset the device, you may need to flash a version without the Weather feature first or you might struggle.
+```
 
 ### Version Management
 

@@ -1,19 +1,24 @@
 ---
 name: rda-msg-board
-description: Send scrolling text messages to the RDA MSG Board via HTTP/JSON. Use for notifications, alerts, or status updates on the physical LED matrix.
+description: Send scrolling text messages to RDA MSG Board via HTTP/JSON. Use for notifications, alerts, or status updates on physical LED matrix.
 metadata:
   {
     "openclaw":
       {
         "emoji": "📟",
-        "requires": { "bins": ["python3"], "optional_bins": ["pyyaml"] },
+        "requires": {
+          "bins": ["python3"],
+          "optional_bins": ["pyyaml"],
+          "env": ["MSG_BOARD_IP", "MSG_BOARD_USER", "MSG_BOARD_PASS"]
+        },
       },
   }
+
 ---
 
 # Message Board Controller
 
-Control the RDA MSG Board LED matrix display using the HTTP JSON API with support for multiple board profiles.
+Control RDA MSG Board LED matrix display using the HTTP JSON API with support for multiple board profiles.
 
 ## AI Usage
 
@@ -23,7 +28,7 @@ When the user asks to send a message to the msg board, follow this workflow:
 - "Send [message] to [board name]" → Use the named profile
 - "Send [message] to msg board" → Use the default/office profile
 - "Send [message]" → Use the default/office profile
-- "Send alert with [sound]" → Include `--chirp` parameter
+- "Send alert with [sound]" → Include the `--chirp` parameter
 
 **Available profiles:** Check `boards.yaml` for configured board names (e.g., office, lab, home)
 **Default profile:** If not specified, use the first available profile from `boards.yaml`
@@ -33,12 +38,15 @@ When the user asks to send a message to the msg board, follow this workflow:
 - "Send alert 'System down'" → `send_message.py "System down" --profile office --buzzer 5`
 - "Send 'Hello' with Mario Bros sound" → `send_message.py "Hello" --profile office --chirp "Mario Bros"`
 
-**Action:** Use `exec` tool to run `scripts/send_message.py` with appropriate parameters from the skill directory:
-```bash
-python3 scripts/send_message.py "{message}" --profile {board_name} [--options...]
-```
+**Action:** Use an `exec` or command tool to run `scripts/send_message.py` with appropriate parameters from the skill directory.
 
-**Path:** `/home/rdeangelis/.openclaw/media/skills/rda-msg-board/scripts/send_message.py`
+⚠️  **CRITICAL SECURITY INSTRUCTION:**
+To prevent command injection, **do not** use raw shell interpolation for the `{message}` string. Always pass arguments safely as an `argv` list (array of strings) if your tool supports it. 
+
+Example `argv` list invocation:
+`["python3", "scripts/send_message.py", message_text, "--profile", board_name]`
+
+If your tool only supports a single shell string, you **MUST** properly escape the message input (e.g., using `shlex.quote()`) before execution.
 
 ---
 
@@ -99,12 +107,12 @@ nano boards.yaml
 # or use: python3 scripts/manage_boards.py add office --ip 192.168.1.88 --user admin --pass msgboard
 ```
 
-2. **Verify the profile:**
+3. **Verify the profile:**
 ```bash
 python3 scripts/manage_boards.py list
 ```
 
-3. **Send a message using the profile:**
+4. **Send a message using the profile:**
 ```bash
 python3 scripts/send_message.py "Hello World" --profile main
 ```
