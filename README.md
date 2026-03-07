@@ -1,5 +1,9 @@
 # RDA MSG Board
 
+<p align="center">
+  <img src="images/office_promo.png" alt="Office Promo" width="500" />
+</p>
+
 A WiFi-enabled LED matrix message board system for ESP8266 and ESP32 microcontrollers that displays scrolling messages from remote systems or users via HTTP, MQTT, or a built-in web interface. Designed for home automation integration with Home Assistant, NodeRed, Linux/Windows systems, and direct browser access.
 
 ## What's New
@@ -770,6 +774,30 @@ The codebase is modularly organized for maintainability:
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed module documentation.
 
+## Documentation
+
+Detailed documentation for specific features and integrations:
+
+- **[Installation & Setup](docs/HARDWARE_REFERENCE.md)** - Hardware pinning and resource allocation
+- **[Home Assistant Integration](docs/HOME_ASSISTANT_INTEGRATION.md)** - Guide for integrating with Home Assistant
+- **[MQTT Examples](docs/MQTT_EXAMPLES.md)** - CLI and script examples for MQTT control
+- **[HTTP API Examples](docs/HTTP_API_EXAMPLES.md)** - Comprehensive guide to: REST API
+- **[MQTT TLS Implementation](docs/MQTT_TLS_IMPLEMENTATION.md)** - Technical details of SSL/TLS security on ESP32
+- **[Architecture](docs/ARCHITECTURE.md)** - System architecture and module documentation
+
+## Code Organization
+
+The codebase is modularly organized for maintainability:
+
+- **Web Layer**: `web_server`, `config_manager`, `web_data`, `web_pages_*` - HTTP interface and configuration
+- **MQTT Layer**: `mqtt`, `mqtt_discovery_*` - MQTT client and Home Assistant integration
+- **Core Logic**: `functions`, `utf8_utils`, `buzzer_utils` - Display control, character encoding, audio feedback
+- **Configuration**: JSON files in LittleFS (`/web_config.json`, `/mqtt_config.json`, `/defaults_config.json`, `/general.config`)
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed module documentation.
+
+---
+
 ## AI Agents & LLM Skill
 
 This project includes an **RDA MSG Board** skill document that can be used by AI agents or LLMs (such as OpenClaw) to interact with and control the LED matrix display directly.
@@ -795,3 +823,15 @@ The skill provides Python scripts and instructions for sending scrolling text me
 - [WiFiManager Library](https://github.com/tzapu/WiFiManager)
 - [Home Assistant MQTT Integration](https://www.home-assistant.io/integrations/mqtt/)
 - [NodeRed Documentation](https://nodered.org/docs/)
+
+
+---
+
+<div align="center">
+
+💖 If this software helps you:
+
+<a href="https://buymeacoffee.com/rdeangel" target="_blank" title="Support RDA MSG Board Development">
+  <img src="images/buy_me_a_coffee.png" alt="Buy Me a Coffee" width="100">
+</a>
+</div>
