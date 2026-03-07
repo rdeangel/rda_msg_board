@@ -1249,6 +1249,8 @@ void routeHACommand(const char* topic, const char* payload) {
     handleRecurrentAlarmIntervalCommand(payload);
   } else if (entity == "recurrent_alarm_chirp") {
     handleRecurrentAlarmChirpCommand(payload);
+  } else if (entity == "recurrent_alarm_disable_weekends") {
+    handleRecurrentAlarmDisableWeekendsCommand(payload);
 #ifndef DISABLE_TIMER_FEATURE
   } else if (strstr(topic, "/timer_enable/set")) {
     handleTimerEnableCommand(payload);

@@ -23,3 +23,5 @@ review_docs/*
 
 # OpenClaw skill - don't commit real credentials
 skills/*/boards.yaml
+.agent/skills/rda-msg-board/*
+skills/rda-msg-board/_meta.json

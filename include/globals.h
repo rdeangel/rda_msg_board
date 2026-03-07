@@ -268,6 +268,7 @@ extern const char *recurrentAlarmConfigFile;
 extern bool recurrentAlarmEnabled;
 extern unsigned long lastRecurrentAlarmTrigger;
 extern int recurrentAlarmIntervalMinutes;  // Converted interval in minutes
+extern bool recurrentAlarmDisableWeekends;  // Disable alarm on weekends
 #endif // DISABLE_ALARM_FEATURE
 
 #ifndef DISABLE_WEATHER_FEATURE

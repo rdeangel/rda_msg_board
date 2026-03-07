@@ -929,12 +929,14 @@ void loadRecurrentAlarmConfiguration(const char *configFile, recurrentAlarmConfi
   strlcpy(config.enabled, doc["enabled"] | "off", STDSIZE);
   strlcpy(config.chirpName, doc["chirpName"] | "Gentle Dawn", STDSIZE);
   strlcpy(config.interval, doc["interval"] | "15min", STDSIZE);
+  strlcpy(config.disableWeekends, doc["disableWeekends"] | "off", STDSIZE);
 
 #if DEBUG == 1
   Serial.println(F("\n=== Recurrent Alarm Configuration Loaded ==="));
   Serial.print(F("Enabled: ")); Serial.println(config.enabled);
   Serial.print(F("Chirp Name: ")); Serial.println(config.chirpName);
   Serial.print(F("Interval: ")); Serial.println(config.interval);
+  Serial.print(F("Disable Weekends: ")); Serial.println(config.disableWeekends);
   Serial.println(F("============================================\n"));
 #endif
 }
@@ -946,6 +948,7 @@ void saveRecurrentAlarmConfiguration(const char *configFile, const recurrentAlar
   doc["enabled"] = config.enabled;
   doc["chirpName"] = config.chirpName;
   doc["interval"] = config.interval;
+  doc["disableWeekends"] = config.disableWeekends;
 
   File file = LittleFS.open(configFile, "w");
   if (!file) {
@@ -964,6 +967,7 @@ void saveRecurrentAlarmConfiguration(const char *configFile, const recurrentAlar
   Serial.print(F("Enabled: ")); Serial.println(config.enabled);
   Serial.print(F("Chirp Name: ")); Serial.println(config.chirpName);
   Serial.print(F("Interval: ")); Serial.println(config.interval);
+  Serial.print(F("Disable Weekends: ")); Serial.println(config.disableWeekends);
   Serial.println(F("===========================================\n"));
 #endif
 }
@@ -979,6 +983,7 @@ void initRecurrentAlarmStoreConfig() {
     strlcpy(recurrentAlarmConfig.enabled, "off", STDSIZE);
     strlcpy(recurrentAlarmConfig.chirpName, "Gentle Dawn", STDSIZE);
     strlcpy(recurrentAlarmConfig.interval, "15min", STDSIZE);
+    strlcpy(recurrentAlarmConfig.disableWeekends, "off", STDSIZE);
 
     // Save defaults to file
     saveRecurrentAlarmConfiguration(configFile, recurrentAlarmConfig);
@@ -989,6 +994,7 @@ void initRecurrentAlarmStoreConfig() {
 
   // Apply configuration to runtime variables
   recurrentAlarmEnabled = (strcmp(recurrentAlarmConfig.enabled, "on") == 0);
+  recurrentAlarmDisableWeekends = (strcmp(recurrentAlarmConfig.disableWeekends, "on") == 0);
   
   // Convert interval string to minutes
   if (strcmp(recurrentAlarmConfig.interval, "15min") == 0) {
@@ -1014,6 +1020,8 @@ void initRecurrentAlarmStoreConfig() {
   Serial.print(F(" ("));
   Serial.print(recurrentAlarmIntervalMinutes);
   Serial.println(F(" min)"));
+  Serial.print(F("Disable Weekends: "));
+  Serial.println(recurrentAlarmConfig.disableWeekends);
 }
 #endif // DISABLE_ALARM_FEATURE
 

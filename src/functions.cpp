@@ -1761,6 +1761,12 @@ void checkRecurrentAlarm() {
   int currentMinute = timeinfo->tm_min;
   int currentSecond = timeinfo->tm_sec;
   int currentDay = timeinfo->tm_yday;
+  int currentDayOfWeek = timeinfo->tm_wday; // 0=Sun, 1=Mon, ..., 6=Sat
+
+  // Check if weekend (Saturday=6 or Sunday=0) and disable weekends is enabled
+  if (recurrentAlarmDisableWeekends && (currentDayOfWeek == 0 || currentDayOfWeek == 6)) {
+    return; // Skip triggering on weekends
+  }
 
   // Handle midday special case
   if (recurrentAlarmIntervalMinutes == -1) {

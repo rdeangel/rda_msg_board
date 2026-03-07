@@ -2,6 +2,13 @@
 
 A WiFi-enabled LED matrix message board system for ESP8266 and ESP32 microcontrollers that displays scrolling messages from remote systems or users via HTTP, MQTT, or a built-in web interface. Designed for home automation integration with Home Assistant, NodeRed, Linux/Windows systems, and direct browser access.
 
+## What's New
+- **Complete Refactor:** Migrated to PlatformIO for better dependency management and improved development workflow.
+- **Modernized UI:** Redesigned responsive web interface with AJAX updates and in-page modal confirmations.
+- **Configuration Management:** Export/Import full JSON config backups and set persistent custom message defaults via the web interface.
+- **Enhanced Integrations:** Zero-config Home Assistant Auto-Discovery and secure MQTT (TLS/SSL) for ESP32.
+- **Expanded Features:** Advanced Clock (Any Timezone) & Timer modes, Sleep Mode with weekend schedules, Global Buzzer toggles, and a new 'Chirp' library for musical alerts.
+
 ## Overview
 
 This project transforms an ESP8266 or ESP32 board paired with MAX7219 LED matrix display modules into a versatile, network-connected message board. It provides multiple methods for sending messages: a web-based GUI, HTTP REST API (URL-encoded or JSON), and MQTT messaging with flexible topic subscriptions. The system features persistent configuration storage, OTA firmware updates, UTF-8 character support, and customizable display parameters including scroll speed, brightness, repeat count, and audible alerts.
@@ -147,8 +154,26 @@ All build environments automatically use this version. To create a new release, 
 
 ### Prerequisites
 
+**Option 1: Building from Source**
 1. Install [Visual Studio Code](https://code.visualstudio.com/)
 2. Install the [PlatformIO IDE extension](https://platformio.org/install/ide?install=vscode)
+
+**Option 2: Using Precompiled Firmware**
+No prerequisites required! See [Firmware Flashing Guide](docs/FIRMWARE_FLASHING_GUIDE.md) for tools to upload precompiled `.bin` files directly to your ESP board.
+
+### Flashing Precompiled Firmware
+
+If you want to use precompiled firmware binaries from [GitHub Releases](https://github.com/rdeangel/rda_msg_board/releases) without building from source, follow our comprehensive [Firmware Flashing Guide](docs/FIRMWARE_FLASHING_GUIDE.md). It covers:
+
+- **Windows:** ESPHome Flasher, NodeMCU PyFlasher, ESP Flash Download Tool, Thonny
+- **Linux:** esptool.py, NodeMCU PyFlasher, ESP Tool (web-based)
+- **Cross-platform:** Thonny IDE, BrewFlasher
+
+Quick summary:
+1. Download firmware `.bin` file matching your board and module count
+2. Choose a flashing tool (esptool.py for command-line, ESPHome Flasher for GUI on Windows)
+3. Connect ESP board via USB
+4. Upload firmware to the board
 
 ### Building and Uploading
 
@@ -195,6 +220,7 @@ The script will:
 ├── docs/                   # Detailed documentation
 │   ├── env_board_variants/ # Hardware wiring diagrams (SVG/PNG)
 │   ├── ARCHITECTURE.md     # System design & logic flow
+│   ├── FIRMWARE_FLASHING_GUIDE.md # Flashing precompiled binaries
 │   ├── HARDWARE_REF.md     # Pinouts & wiring guides
 │   ├── HOME_ASSISTANT.md   # Discovery & entity mapping
 │   ├── HTTP_API.md         # REST endpoint documentation
@@ -710,6 +736,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Migrated to PlatformIO for improved development workflow
 - Uses MD_Parola library for scrolling effects
 - WiFiManager for easy WiFi configuration
+
+## Acknowledgments
+
+This project relies on the excellent open-source libraries and tools from the Arduino/ESP community. Special thanks to:
+
+- **[MajicDesigns/MD_MAX72XX](https://github.com/MajicDesigns/MD_MAX72XX)** by Marco Colli - The foundational library for controlling MAX7219 LED matrix displays. This project uses MD_MAX72XX for driving LED matrix displays and would not be possible without this excellent work.
+- **[MD_Parola](https://github.com/MajicDesigns/MD_Parola)** by Marco Colli - Scrolling text animation effects and display management for MAX7219 matrices, built on top of MD_MAX72XX.
+- **[WiFiManager](https://github.com/tzapu/WiFiManager)** by tzapu - WiFi configuration portal that makes initial device setup painless.
+- **[ArduinoJson](https://github.com/bblanchon/ArduinoJson)** by Benoit Blanchon - Efficient JSON parsing and serialization library.
+- **[PubSubClient](https://github.com/knolleary/pubsubclient)** by Nick O'Leary - MQTT client library for connecting to MQTT brokers.
+- The entire [PlatformIO](https://platformio.org/) team for the excellent build system and development environment.
 
 ## Documentation
 

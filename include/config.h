@@ -290,6 +290,7 @@ struct recurrentAlarmConfigObj {
   char enabled[FLAG_SIZE];            // "on" or "off"
   char chirpName[CHIRP_SIZE];         // Chirp pattern name from chirp_library
   char interval[INTERVAL_SIZE];       // "15min", "30min", "1hour", "3hours", "6hours", "midday"
+  char disableWeekends[FLAG_SIZE];    // "on" or "off" - disable alarm on Saturday and Sunday
 };
 #endif
 

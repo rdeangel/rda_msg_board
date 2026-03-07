@@ -266,6 +266,7 @@ const char *recurrentAlarmConfigFile = "/recurrent_alarm_config.json";
 bool recurrentAlarmEnabled = false;
 unsigned long lastRecurrentAlarmTrigger = 0;
 int recurrentAlarmIntervalMinutes = 15;
+bool recurrentAlarmDisableWeekends = false;
 #endif // DISABLE_ALARM_FEATURE
 
 #ifndef DISABLE_WEATHER_FEATURE

@@ -779,7 +779,8 @@ void httpWebDirDef() {
     json += "  \"recurrentAlarm\": {\n";
     json += "    \"enabled\": "; addString(recurrentAlarmConfig.enabled); json += ",\n";
     json += "    \"chirpName\": "; addString(recurrentAlarmConfig.chirpName); json += ",\n";
-    json += "    \"interval\": "; addString(recurrentAlarmConfig.interval); json += "\n";
+    json += "    \"interval\": "; addString(recurrentAlarmConfig.interval); json += ",\n";
+    json += "    \"disableWeekends\": "; addString(recurrentAlarmConfig.disableWeekends); json += "\n";
     json += "  },\n";
 
     // WiFi config (Security Warning: Password stored in plain text)
@@ -1082,6 +1083,10 @@ void httpWebDirDef() {
       if (!recurrentAlarm["interval"].isNull()) {
         strlcpy(recurrentAlarmConfig.interval, recurrentAlarm["interval"], sizeof(recurrentAlarmConfig.interval));
         recurrentAlarmIntervalMinutes = getIntervalMinutes(recurrentAlarmConfig.interval);
+      }
+      if (!recurrentAlarm["disableWeekends"].isNull()) {
+        strlcpy(recurrentAlarmConfig.disableWeekends, recurrentAlarm["disableWeekends"], sizeof(recurrentAlarmConfig.disableWeekends));
+        recurrentAlarmDisableWeekends = (strcmp(recurrentAlarmConfig.disableWeekends, "on") == 0);
       }
       saveRecurrentAlarmConfiguration(recurrentAlarmConfigFile, recurrentAlarmConfig);
     }
@@ -1573,6 +1578,7 @@ void httpWebDirDef() {
     doc["enabled"] = recurrentAlarmConfig.enabled;
     doc["chirpName"] = recurrentAlarmConfig.chirpName;
     doc["interval"] = recurrentAlarmConfig.interval;
+    doc["disableWeekends"] = recurrentAlarmConfig.disableWeekends;
 
     String json;
     serializeJson(doc, json);
@@ -1599,13 +1605,16 @@ void httpWebDirDef() {
       const char* enabled = doc["enabled"] | "off";
       const char* chirpName = doc["chirpName"] | "Gentle Dawn";
       const char* interval = doc["interval"] | "15min";
+      const char* disableWeekends = doc["disableWeekends"] | "off";
 
       strlcpy(recurrentAlarmConfig.enabled, enabled, STDSIZE);
       strlcpy(recurrentAlarmConfig.chirpName, chirpName, STDSIZE);
       strlcpy(recurrentAlarmConfig.interval, interval, STDSIZE);
+      strlcpy(recurrentAlarmConfig.disableWeekends, disableWeekends, STDSIZE);
 
       // Update runtime variables
       recurrentAlarmEnabled = (strcmp(recurrentAlarmConfig.enabled, "on") == 0);
+      recurrentAlarmDisableWeekends = (strcmp(recurrentAlarmConfig.disableWeekends, "on") == 0);
 
       // Convert interval string to minutes
       if (strcmp(recurrentAlarmConfig.interval, "15min") == 0) {
@@ -1629,6 +1638,7 @@ void httpWebDirDef() {
 
       // Publish MQTT state updates if HA discovery enabled
       publishRecurrentAlarmEnableState();
+      publishRecurrentAlarmDisableWeekendsState();
       publishRecurrentAlarmIntervalState();
       publishRecurrentAlarmChirpState();
 

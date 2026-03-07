@@ -1501,6 +1501,9 @@ function loadRecurrentAlarmConfig() {
       // Populate enable toggle
       document.getElementById('RECURRENT_ALARM_ENABLED').checked = (data.enabled === 'on');
 
+      // Populate disable weekends toggle
+      document.getElementById('RECURRENT_ALARM_DISABLE_WEEKENDS').checked = (data.disableWeekends === 'on');
+
       // Populate interval dropdown
       document.getElementById('RECURRENT_ALARM_INTERVAL').value = data.interval || '15min';
 
@@ -1531,6 +1534,7 @@ function saveRecurrentAlarmConfig(event, shouldClose) {
   // Collect form data
   var configData = {
     enabled: document.getElementById('RECURRENT_ALARM_ENABLED').checked ? 'on' : 'off',
+    disableWeekends: document.getElementById('RECURRENT_ALARM_DISABLE_WEEKENDS').checked ? 'on' : 'off',
     interval: document.getElementById('RECURRENT_ALARM_INTERVAL').value,
     chirpName: document.getElementById('RECURRENT_ALARM_CHIRP').value
   };
@@ -2270,6 +2274,16 @@ window.onload = function() {
           <label class="switch">
             <input type="checkbox" id="RECURRENT_ALARM_ENABLED" name="RecurrentAlarmEnabled" value="on">
             <input type="hidden" id="RECURRENT_ALARM_ENABLED_HIDDEN" name="RecurrentAlarmEnabled" value="off">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Disable Weekends Toggle -->
+        <div class="toggle-card">
+          <span class="label-text">Disable on Weekends</span>
+          <label class="switch">
+            <input type="checkbox" id="RECURRENT_ALARM_DISABLE_WEEKENDS" name="RecurrentAlarmDisableWeekends" value="on">
+            <input type="hidden" id="RECURRENT_ALARM_DISABLE_WEEKENDS_HIDDEN" name="RecurrentAlarmDisableWeekends" value="off">
             <span class="slider"></span>
           </label>
         </div>

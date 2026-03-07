@@ -377,6 +377,30 @@ void publishRecurrentAlarmDiscoveries() {
     PRINT("\nPublished recurrent_alarm_enable discovery to: ", topic);
   }
 
+  // Recurrent Alarm Disable Weekends Switch
+  {
+    JsonDocument doc;
+    char baseTopic[256];
+    snprintf(baseTopic, sizeof(baseTopic), "%s/ha", mqttTopicDevice);
+    doc["~"] = baseTopic;
+    doc["name"] = "Recurrent Alarm Disable Weekends";
+    doc["uniq_id"] = String(haBaseTopic) + "_recurrent_alarm_disable_weekends";
+    doc["cmd_t"] = "~/recurrent_alarm_disable_weekends/set";
+    doc["stat_t"] = "~/recurrent_alarm_disable_weekends/state";
+    doc["payload_on"] = "ON";
+    doc["payload_off"] = "OFF";
+    doc["icon"] = "mdi:calendar-weekend";
+    doc["ent_cat"] = "config";
+    addDeviceInfo(doc);
+    addAvailability(doc);
+    char topic[256];
+    buildDiscoveryTopic(topic, sizeof(topic), "switch", "recurrent_alarm_disable_weekends");
+    char payload[1024];
+    serializeJson(doc, payload, sizeof(payload));
+    mqttClient.publish(topic, payload, true);
+    PRINT("\nPublished recurrent_alarm_disable_weekends discovery to: ", topic);
+  }
+
   // Recurrent Alarm Interval Select
   {
     JsonDocument doc;
@@ -453,6 +477,15 @@ void publishRecurrentAlarmEnableState() {
   PRINT("\nPublished recurrent_alarm_enable state: ", value);
 }
 
+void publishRecurrentAlarmDisableWeekendsState() {
+  if (!mqttClient.connected() || strcmp(mqttHaDiscovery, "on") != 0 || !mqttDiscoveryPublished) return;
+  char topic[256];
+  buildStateTopic(topic, sizeof(topic), "recurrent_alarm_disable_weekends");
+  const char* value = recurrentAlarmDisableWeekends ? "ON" : "OFF";
+  mqttClient.publish(topic, value, true);
+  PRINT("\nPublished recurrent_alarm_disable_weekends state: ", value);
+}
+
 void publishRecurrentAlarmIntervalState() {
   if (!mqttClient.connected() || strcmp(mqttHaDiscovery, "on") != 0 || !mqttDiscoveryPublished) return;
   char topic[256];
@@ -471,6 +504,8 @@ void publishRecurrentAlarmChirpState() {
 
 void publishAllRecurrentAlarmStates() {
   publishRecurrentAlarmEnableState();
+  delay(20);
+  publishRecurrentAlarmDisableWeekendsState();
   delay(20);
   publishRecurrentAlarmIntervalState();
   delay(20);
@@ -518,4 +553,14 @@ void handleRecurrentAlarmChirpCommand(const char* payload) {
   strlcpy(recurrentAlarmConfig.chirpName, payload, sizeof(recurrentAlarmConfig.chirpName));
   saveRecurrentAlarmConfiguration(recurrentAlarmConfigFile, recurrentAlarmConfig);
   publishRecurrentAlarmChirpState();
+}
+
+void handleRecurrentAlarmDisableWeekendsCommand(const char* payload) {
+  PRINT("\nHandling recurrent_alarm_disable_weekends command: ", payload);
+
+  bool disableWeekends = (strcmp(payload, "ON") == 0);
+  strlcpy(recurrentAlarmConfig.disableWeekends, disableWeekends ? "on" : "off", sizeof(recurrentAlarmConfig.disableWeekends));
+  recurrentAlarmDisableWeekends = disableWeekends;
+  saveRecurrentAlarmConfiguration(recurrentAlarmConfigFile, recurrentAlarmConfig);
+  publishRecurrentAlarmDisableWeekendsState();
 }

@@ -30,6 +30,7 @@ void publishRecurrentAlarmDiscoveries();
 
 // Recurrent Alarm State Publishing Functions
 void publishRecurrentAlarmEnableState();
+void publishRecurrentAlarmDisableWeekendsState();
 void publishRecurrentAlarmIntervalState();
 void publishRecurrentAlarmChirpState();
 void publishAllRecurrentAlarmStates();
@@ -38,6 +39,7 @@ void publishAllRecurrentAlarmStates();
 void handleRecurrentAlarmEnableCommand(const char* payload);
 void handleRecurrentAlarmIntervalCommand(const char* payload);
 void handleRecurrentAlarmChirpCommand(const char* payload);
+void handleRecurrentAlarmDisableWeekendsCommand(const char* payload);
 
 // Clock Command Handlers
 void handleClockEnableCommand(const char* payload);
