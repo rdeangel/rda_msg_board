@@ -53,7 +53,7 @@ CHANGELOG_FILE="CHANGELOG.md"
 FORCE=false
 DRY_RUN=false
 NO_CHANGELOG=false
-COMMIT_MESSAGE="Update code"
+COMMIT_MESSAGE=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -124,23 +124,25 @@ generate_release_notes() {
     # --- Categorize in priority order ---
     local breaking security features fixes improvements docs style tests chore build deps refactor removals remaining uncategorized
 
-    breaking=$(    echo "$all_commits" | grep -iE "\|breaking:|\|BREAKING CHANGE|\|.*!:"                                           || true)
-    security=$(    echo "$all_commits" | grep -iE "\|security:|\|sec:|\|vulnerability|\|CVE"                                       || true)
-    remaining=$(   echo "$all_commits" | grep -ivE "\|breaking:|\|BREAKING CHANGE|\|.*!:|\|security:|\|sec:|\|vulnerability|\|CVE" || true)
+    local opt_scope="(\([^)]*\))?:"
 
-    features=$(    echo "$remaining"   | grep -iE "\|feat:|\|add:"                     || true)
-    fixes=$(       echo "$remaining"   | grep -iE "\|fix:|\|bug:"                      || true)
-    remaining=$(   echo "$remaining"   | grep -ivE "\|feat:|\|add:|\|fix:|\|bug:"      || true)
+    breaking=$(    echo "$all_commits" | grep -iE "\|breaking${opt_scope}|\|BREAKING CHANGE|\|.*!:" || true)
+    security=$(    echo "$all_commits" | grep -iE "\|(security|sec)${opt_scope}|\|vulnerability|\|CVE" || true)
+    remaining=$(   echo "$all_commits" | grep -ivE "\|breaking${opt_scope}|\|BREAKING CHANGE|\|.*!:|\|(security|sec)${opt_scope}|\|vulnerability|\|CVE" || true)
 
-    docs=$(        echo "$remaining"   | grep -iE "\|docs:|\|documentation:|\|readme:" || true)
-    style=$(       echo "$remaining"   | grep -iE "\|style:|\|format:|\|lint:"         || true)
-    tests=$(       echo "$remaining"   | grep -iE "\|test:|\|tests:|\|spec:"           || true)
-    chore=$(       echo "$remaining"   | grep -iE "\|chore:|\|maintenance:"            || true)
-    build=$(       echo "$remaining"   | grep -iE "\|build:|\|ci:|\|deploy:"           || true)
-    deps=$(        echo "$remaining"   | grep -iE "\|deps:|\|dependencies:|\|package:" || true)
-    refactor=$(    echo "$remaining"   | grep -iE "\|refactor:|\|restructure:"         || true)
-    removals=$(    echo "$remaining"   | grep -iE "\|remove:|\|delete:|\|clean:"       || true)
-    remaining=$(   echo "$remaining"   | grep -ivE "\|docs:|\|documentation:|\|readme:|\|style:|\|format:|\|lint:|\|test:|\|tests:|\|spec:|\|chore:|\|maintenance:|\|build:|\|ci:|\|deploy:|\|deps:|\|dependencies:|\|package:|\|refactor:|\|restructure:|\|remove:|\|delete:|\|clean:" || true)
+    features=$(    echo "$remaining"   | grep -iE "\|(feat|add)${opt_scope}" || true)
+    fixes=$(       echo "$remaining"   | grep -iE "\|(fix|bug)${opt_scope}" || true)
+    remaining=$(   echo "$remaining"   | grep -ivE "\|(feat|add|fix|bug)${opt_scope}" || true)
+
+    docs=$(        echo "$remaining"   | grep -iE "\|(docs|documentation|readme)${opt_scope}" || true)
+    style=$(       echo "$remaining"   | grep -iE "\|(style|format|lint)${opt_scope}" || true)
+    tests=$(       echo "$remaining"   | grep -iE "\|(test|tests|spec)${opt_scope}" || true)
+    chore=$(       echo "$remaining"   | grep -iE "\|(chore|maintenance)${opt_scope}" || true)
+    build=$(       echo "$remaining"   | grep -iE "\|(build|ci|deploy)${opt_scope}" || true)
+    deps=$(        echo "$remaining"   | grep -iE "\|(deps|dependencies|package)${opt_scope}" || true)
+    refactor=$(    echo "$remaining"   | grep -iE "\|(refactor|restructure)${opt_scope}" || true)
+    removals=$(    echo "$remaining"   | grep -iE "\|(remove|delete|clean)${opt_scope}" || true)
+    remaining=$(   echo "$remaining"   | grep -ivE "\|(docs|documentation|readme|style|format|lint|test|tests|spec|chore|maintenance|build|ci|deploy|deps|dependencies|package|refactor|restructure|remove|delete|clean)${opt_scope}" || true)
 
     improvements=$(echo "$remaining"   | grep -iE "improve|enhance|update|refactor|optimize|debug" || true)
     uncategorized=$(echo "$remaining"  | grep -ivE "improve|enhance|update|refactor|optimize|debug" || true)
@@ -265,6 +267,12 @@ if [ -z "$VERSION" ]; then
 fi
 print_status "Version from platformio.ini: ${VERSION}"
 
+if [ -z "$COMMIT_MESSAGE" ]; then
+    FULL_COMMIT_MSG="Release ${VERSION}"
+else
+    FULL_COMMIT_MSG="Release ${VERSION} - ${COMMIT_MESSAGE}"
+fi
+
 # --- Determine commit range ---
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null | grep -v "^${VERSION}$" | head -1 || echo "")
 if [ -n "$LAST_TAG" ]; then
@@ -312,7 +320,7 @@ if git rev-parse "$VERSION" >/dev/null 2>&1; then
         fi
 
         git add .
-        if git commit -m "$COMMIT_MESSAGE"; then
+        if git commit -m "$FULL_COMMIT_MSG"; then
             print_success "Changes committed"
         else
             print_status "Nothing to commit — pushing existing commits"
@@ -333,7 +341,7 @@ if git rev-parse "$VERSION" >/dev/null 2>&1; then
             done
 
             git add .
-            git commit -m "Release ${VERSION} - ${COMMIT_MESSAGE}" || \
+            git commit -m "$FULL_COMMIT_MSG" || \
                 print_status "No new changes to commit — proceeding with tag"
 
             if [ "$NO_CHANGELOG" = false ]; then
@@ -380,7 +388,7 @@ else
 
     if [ "$DRY_RUN" = false ]; then
         git add .
-        if git commit -m "Release ${VERSION} - ${COMMIT_MESSAGE}"; then
+        if git commit -m "$FULL_COMMIT_MSG"; then
             print_success "Changes committed"
         else
             print_status "No staged changes — continuing with tag creation"
