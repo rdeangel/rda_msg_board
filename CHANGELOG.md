@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- releases -->
 
+## [v1.1.0] - 2026-03-07
+
+### ✨ New Features
+- feat(alarm): add disable weekends option for recurrent alarms - [e4987cc](https://github.com/rdeangel/rda_msg_board/commit/e4987cc)
+
+### 🐛 Bug Fixes
+- fix(release): support optional scopes in conventional commit regex and remove default message - [c01988b](https://github.com/rdeangel/rda_msg_board/commit/c01988b)
+
+### 📚 Documentation
+- docs: enhance README with images and documentation sections - [5258daa](https://github.com/rdeangel/rda_msg_board/commit/5258daa)
+- docs: modified skill instruction and added fixed some README.md text - [d99936c](https://github.com/rdeangel/rda_msg_board/commit/d99936c)
+
 ## [1.0.0] - Initial Release
 
 This is the initial V1 release of the RDA MSG Board firmware, which has been entirely refactored from the original Arduino IDE implementation to PlatformIO for a robust dependency-managed project structure.
