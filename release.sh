@@ -97,10 +97,6 @@ done
 push_all() {
     local tag="$1"
     for remote in "${REMOTES[@]}"; do
-        print_status "Pushing to ${remote}..."
-        git push "$remote" main
-        if [ -n "$tag" ]; then
-            git push "$remote" "$tag"
         if git remote | grep -q "^${remote}$"; then
             print_status "Pushing to ${remote}..."
             git push "$remote" main
@@ -111,7 +107,6 @@ push_all() {
         else
             print_warning "Remote '${remote}' not found, skipping."
         fi
-        print_success "  ✅ ${remote} done"
     done
 }
 
@@ -328,16 +323,16 @@ if git rev-parse "$VERSION" >/dev/null 2>&1; then
             done
         fi
 
-        git add .
-        if git commit -m "$FULL_COMMIT_MSG"; then
-            print_success "Changes committed"
-        else
-            print_status "Nothing to commit — pushing existing commits"
-        fi
         if [ "$DRY_RUN" = false ]; then
+            git add .
+            if git commit -m "$FULL_COMMIT_MSG"; then
+                print_success "Changes committed"
+            else
+                print_status "Nothing to commit — pushing existing commits"
+            fi
             push_all
         else
-            print_status "[dry-run] Would push to: ${REMOTES[*]}"
+            print_status "[dry-run] Would commit and push to: ${REMOTES[*]}"
         fi
 
     else
