@@ -57,6 +57,11 @@ void publishClockDiscoveries() {
     PRINT("\nPublished clock_brightness discovery to: ", topic);
   }
 
+  // --- Advanced clock entities: skipped on ESP8266 to reduce heap pressure ---
+  // Re-enable by removing DISABLE_HA_CLOCK_ADVANCED from platformio.ini build_flags.
+  // These are still configurable via the web UI.
+#ifndef DISABLE_HA_CLOCK_ADVANCED
+
   // Transition Speed Number - Main Controls
   {
     JsonDocument doc;
@@ -348,6 +353,8 @@ void publishClockDiscoveries() {
     mqttClient.publish(topic, payload, true);
     PRINT("\nPublished clock_resync_interval discovery to: ", topic);
   }
+
+#endif // DISABLE_HA_CLOCK_ADVANCED
 
   // Clock Face Select - font/display style
   {

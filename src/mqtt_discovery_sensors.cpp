@@ -1762,8 +1762,10 @@ void publishTLSStatusState() {
 void publishAllClockStates() {
   publishClockEnableState();
   publishClockBrightnessState();
+#ifndef DISABLE_HA_CLOCK_ADVANCED
   publishClockNtpServerState();
   publishClockCustomTzState();
+#endif
   publishClockDateFormatState();
   #if MAX_DEVICES == 4
   publishClockDateAlternateSecondsState();
@@ -1771,11 +1773,13 @@ void publishAllClockStates() {
   #if MAX_DEVICES == 8
   publishClockCustomFormatState();
   #endif
+#ifndef DISABLE_HA_CLOCK_ADVANCED
   publishClockTransitionDelayState();
   publishClockTransitionSpeedState();
   publishClockTransitionEffectState();
   publishClockRandomizeState();
   publishClockResyncIntervalState();
+#endif
   publishClockFaceState();
   publishClockDateAlternateState();
   publishClockAmPmState();

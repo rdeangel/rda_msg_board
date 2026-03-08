@@ -77,7 +77,11 @@ unsigned long lastTelemetryUpdate = 0;
 const unsigned long telemetryInterval = 60000;
 
 // HA Parameter Memory (RAM-only, initialized from flash defaults on boot)
+#ifdef ESP8266
+char haLastMessage[256] = "";   // Reduced from MSG_SIZE on ESP8266 to save BSS RAM
+#else
 char haLastMessage[MSG_SIZE] = "";
+#endif
 int haLastRepeat = -1;
 int haLastBuzzer = -1;
 int haLastScrollDelay = -1;

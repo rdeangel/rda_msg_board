@@ -86,7 +86,11 @@ extern unsigned long lastTelemetryUpdate;
 extern const unsigned long telemetryInterval;
 
 // HA Parameter Memory (RAM-only, initialized from flash defaults on boot)
+#ifdef ESP8266
+extern char haLastMessage[256];   // Reduced from MSG_SIZE on ESP8266 to save BSS RAM
+#else
 extern char haLastMessage[MSG_SIZE];
+#endif
 extern int haLastRepeat;
 extern int haLastBuzzer;
 extern int haLastScrollDelay;
