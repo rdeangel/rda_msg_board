@@ -278,7 +278,10 @@ else
 fi
 
 # --- Determine commit range ---
-LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null | grep -v "^${VERSION}$" | head -1 || echo "")
+# Use git tag --sort=-version:refname to reliably find the previous tag regardless
+# of whether HEAD is on a tag boundary. git describe --tags is fragile when HEAD is
+# exactly on a release commit or when tags are not on the direct ancestry path.
+LAST_TAG=$(git tag --sort=-version:refname 2>/dev/null | grep -v "^${VERSION}$" | head -1 || echo "")
 if [ -n "$LAST_TAG" ]; then
     COMMIT_RANGE="${LAST_TAG}..HEAD"
     print_status "Commits since last tag: ${LAST_TAG}"

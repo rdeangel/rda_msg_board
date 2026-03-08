@@ -7,7 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- releases -->
 
-## [v1.2.0] - 2026-03-07
+## [v1.2.0] - 2026-03-08
+
+### ✨ New Features
+- feat: Add MQTT control for clock face selection and include new MatrixLight fonts with a BDF conversion tool - [0f8df7d](https://github.com/rdeangel/rda_msg_board/commit/0f8df7d)
+- feat(clock): add AM/PM mode, date alternation, and Matrix Light 6px font - [87f0968](https://github.com/rdeangel/rda_msg_board/commit/87f0968)
+
+### 🐛 Bug Fixes
+- fix(ESP8266): reduce heap pressure to stabilize WiFiManager captive portal - [ee0f1c2](https://github.com/rdeangel/rda_msg_board/commit/ee0f1c2)
+- fix(release.sh): prevent commits during dry-run and validate remote existence before push - [df76a86](https://github.com/rdeangel/rda_msg_board/commit/df76a86)
+
+### 📚 Documentation
+- docs: update documentation for v1.2.0 release and architecture - [88d79d3](https://github.com/rdeangel/rda_msg_board/commit/88d79d3)
+
+## [v1.1.0] - 2026-03-07
 
 ### ✨ New Features
 - feat(alarm): add disable weekends option for recurrent alarms - [e4987cc](https://github.com/rdeangel/rda_msg_board/commit/e4987cc)
