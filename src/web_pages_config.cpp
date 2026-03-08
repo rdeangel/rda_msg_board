@@ -501,7 +501,7 @@ function toggleCustomTzInput() {
 // Clock options helpers
 function isMatrixLight() {
   var face = document.getElementById('CLOCKFACE').value;
-  return face === 'MATRIX_LIGHT' || face === 'MATRIX_LIGHT_6';
+  return face !== 'DEFAULT';
 }
 
 function populateDateFormatOptions() {
@@ -536,10 +536,10 @@ function toggleClockOptions() {
   var dateFormat = dateFormatSelect.value;
   var ampmOn = ampmToggle.value === 'on';
 
-  // Step 1: TIME_SECONDS on 4m requires a Matrix Light font
+  // Step 1: TIME_SECONDS on 4m requires a bitmap font (DEFAULT built-in is too wide)
   var defaultOption = clockFaceSelect.querySelector('option[value="DEFAULT"]');
   if (maxDevices == 4 && dateFormat === 'TIME_SECONDS') {
-    if (clockFaceSelect.value === 'DEFAULT') clockFaceSelect.value = 'MATRIX_LIGHT';
+    if (clockFaceSelect.value === 'DEFAULT') clockFaceSelect.value = 'MATRIX_LIGHT_6';
     if (defaultOption) defaultOption.disabled = true;
   } else {
     if (defaultOption) defaultOption.disabled = false;
@@ -2004,12 +2004,20 @@ window.onload = function() {
       <!-- Clock Face / Font Selection -->
       <label for="CLOCKFACE">Clock Face</label>
       <select id="CLOCKFACE" name="ClockFace" onchange="toggleClockOptions()" style="width: 100%; padding: 12px; background: var(--input); border: 1px solid var(--border); color: #fff; border-radius: 6px; font-size: 1rem; margin-bottom: 5px;">
-        <option value="DEFAULT">Default</option>
-        <option value="MATRIX_LIGHT">Matrix Light 8px (compact, fits HH:MM:SS)</option>
-        <option value="MATRIX_LIGHT_6">Matrix Light 6px (centred, smallest)</option>
+        <option value="DEFAULT">Default (built-in Parola font)</option>
+        <optgroup label="Height 8px — full height">
+          <option value="MATRIX_LIGHT">Matrix Light 8px</option>
+          <option value="MATRIX_LIGHT_8X">Matrix Light 8px X</option>
+        </optgroup>
+        <optgroup label="Height 6px — compact, centred">
+          <option value="MATRIX_LIGHT_6">Matrix Light 6px</option>
+          <option value="MATRIX_LIGHT_6X">Matrix Light 6px X</option>
+          <option value="MATRIX_CHUNKY_6">Matrix Chunky 6px</option>
+          <option value="MATRIX_CHUNKY_6X">Matrix Chunky 6px X</option>
+        </optgroup>
       </select>
       <p style="font-size: 0.85rem; color: var(--subtext); margin: -5px 0 8px 0;">
-        Matrix Light fonts use narrower bitmap glyphs. Pair with &ldquo;Time with Seconds&rdquo; below.
+        Bitmap fonts use narrow 3px-wide digits. Chunky = bold strokes (open-top 4). X = extended variant. Pair 6px with &ldquo;Time with Seconds&rdquo; for 4-module.
       </p>
       <button type="button" onclick="testMatrixFont()" style="padding: 6px 14px; background: var(--input); border: 1px solid var(--border); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.85rem; margin-bottom: 15px;">Preview Clock Face Font</button>
 

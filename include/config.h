@@ -150,8 +150,9 @@
 #define FLAG_SIZE       8   // "on" / "off" (3 chars + null, 4 margin)
 #define TIME_SIZE       8   // "HH:MM" (5 chars + null, 2 margin)
 #define CHIRP_SIZE      24  // chirp pattern names — longest is "Close Encounters" (16 chars)
-#define TIMER_MODE_SIZE 16  // "countdown" / "stopwatch" (9 chars + null, 6 margin)
-#define INTERVAL_SIZE   12  // "15min" / "30min" / "1hour" / "3hours" / "midday" (max 6 chars)
+#define TIMER_MODE_SIZE  16  // "countdown" / "stopwatch" (9 chars + null, 6 margin)
+#define CLOCK_FACE_SIZE  20  // "MATRIX_CHUNKY_6X" (16 chars + null, 3 margin)
+#define INTERVAL_SIZE    12  // "15min" / "30min" / "1hour" / "3hours" / "midday" (max 6 chars)
 
 // Debug Macros
 #if DEBUG
@@ -234,7 +235,7 @@ struct clockConfigObj {
   char dateAlternate[FLAG_SIZE];      // "on" / "off" — rotate through date displays
   char dateAlternateSeconds[REP_SIZE]; // "5" (seconds per step)
   char customDateFormat[STDSIZE];     // Custom strftime format string (user text, keep large)
-  char clockFace[TIMER_MODE_SIZE];    // "DEFAULT", "MATRIX_LIGHT", "MATRIX_LIGHT_6"
+  char clockFace[CLOCK_FACE_SIZE];    // "DEFAULT", "MATRIX_LIGHT", "MATRIX_LIGHT_6", "MATRIX_CHUNKY_6", etc.
   char clockAmPm[FLAG_SIZE];          // "on" / "off" — 12-hour AM/PM mode
 };
 

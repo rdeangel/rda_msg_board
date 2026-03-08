@@ -232,8 +232,12 @@ The script will:
 ├── include/                     # Header files (*.h)
 │   ├── config.h                 # Struct definitions & compile-time constants
 │   ├── globals.h                # Shared global variable declarations
-│   ├── MatrixLight8_font.h      # Compact 8px clock bitmap font (PROGMEM)
-│   ├── MatrixLight6_font.h      # Compact 6px clock bitmap font, centred (PROGMEM)
+│   ├── MatrixLight8_font.h      # Matrix Light 8px clock bitmap font (PROGMEM)
+│   ├── MatrixLight8X_font.h     # Matrix Light 8px X clock bitmap font (PROGMEM)
+│   ├── MatrixLight6_font.h      # Matrix Light 6px clock bitmap font, centred (PROGMEM)
+│   ├── MatrixLight6X_font.h     # Matrix Light 6px X clock bitmap font, centred (PROGMEM)
+│   ├── MatrixChunky6_font.h     # Matrix Chunky 6px clock bitmap font, centred (PROGMEM)
+│   ├── MatrixChunky6X_font.h    # Matrix Chunky 6px X clock bitmap font, centred (PROGMEM)
 │   └── *.h                      # Module headers (mqtt, web, timer, weather…)
 ├── src/                         # Source files (*.cpp)
 │   ├── main.cpp                 # Setup/Loop entry point
@@ -259,9 +263,13 @@ The script will:
 │   └── weather.cpp              # OpenWeatherMap API integration
 ├── tools/                       # Development utilities
 │   ├── bdf_to_parola.py         # BDF → MD_MAX72XX PROGMEM font converter
-│   └── fonts/                   # Source BDF font files
-│       ├── MatrixLight8.bdf     # 8px source — github.com/trip5/Matrix-Fonts (CC-BY)
-│       └── MatrixLight6.bdf     # 6px source — github.com/trip5/Matrix-Fonts (CC-BY)
+│   └── fonts/                   # Source BDF font files (github.com/trip5/Matrix-Fonts, CC-BY)
+│       ├── MatrixLight8.bdf     # 8px Light source
+│       ├── MatrixLight8X.bdf    # 8px Light X (extended spacing) source
+│       ├── MatrixLight6.bdf     # 6px Light source
+│       ├── MatrixLight6X.bdf    # 6px Light X (extended spacing) source
+│       ├── MatrixChunky6.bdf    # 6px Chunky source
+│       └── MatrixChunky6X.bdf   # 6px Chunky X (extended spacing) source
 ├── node_red_flow.json           # NodeRed integration example
 ├── platformio.ini               # PIO environments & dependencies
 ├── release.sh / release.ps1     # Cross-platform release scripts
@@ -360,22 +368,30 @@ Access the web interface at the device's IP address or mDNS hostname (e.g., `htt
 
 #### Clock Faces
 
-Three clock faces are available, each with different capabilities:
+Seven clock faces are available across two series, all sourced from the [trip5/Matrix-Fonts](https://github.com/trip5/Matrix-Fonts) project (see Acknowledgments):
 
-| Feature | Default | Matrix Light 8px | Matrix Light 6px |
-|---|---|---|---|
-| Time only `HH:MM` | ✓ | ✓ | ✓ |
-| Seconds `HH:MM.SS` | 8-module only | ✓ | ✓ |
-| 12-hour AM/PM | 8-module only | ✓ | ✓ |
-| Date & custom formats | 8-module only | 8-module only | 8-module only |
-| Date alternation | ✓ | ✓ | ✓ |
-| Day-of-week step | — | ✓ | ✓ |
+| Feature | Default | Light 8px | Light 8px X | Light 6px | Light 6px X | Chunky 6px | Chunky 6px X |
+|---|---|---|---|---|---|---|---|
+| Time only `HH:MM` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Seconds `HH:MM.SS` | 8-module only | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| 12-hour AM/PM | 8-module only | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Date & custom formats | 8-module only | 8-module only | 8-module only | 8-module only | 8-module only | 8-module only | 8-module only |
+| Date alternation | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Day-of-week step | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 **Default** — the built-in MD_Parola proportional font. Widest characters; on 4-module builds only `HH:MM` fits.
 
-**Matrix Light 8px** — a compact 8-row bitmap font with narrow 3-pixel-wide digits. Fits `HH:MM.SS` (27 px) within a 4-module (32 px) display. Enables seconds, AM/PM, and the day-of-week alternation step. Converted from the [Matrix-Fonts](https://github.com/trip5/Matrix-Fonts) BDF source (see Acknowledgments).
+**8px series** — full 8-row height fonts, best suited for 8-module builds where wider displays give more room for date and seconds:
 
-**Matrix Light 6px** — the same design scaled to 6 rows, vertically centred in the 8-row display. Produces a lighter, smaller appearance while retaining the same feature set as Matrix Light 8px. Also sourced from [Matrix-Fonts](https://github.com/trip5/Matrix-Fonts).
+- **Matrix Light 8px** (`MATRIX_LIGHT`) — narrow 3-pixel-wide digits, compact spacing. Fits `HH:MM.SS` (27 px) within a 4-module (32 px) display.
+- **Matrix Light 8px X** (`MATRIX_LIGHT_8X`) — same design with slightly extended inter-character spacing for improved readability.
+
+**6px series** — 6-row height fonts vertically centred in the 8-row display, ideal for 4-module clocks. Produce a lighter, smaller appearance while retaining full seconds, AM/PM, and alternation support:
+
+- **Matrix Light 6px** (`MATRIX_LIGHT_6`) — the Light 8px design scaled to 6 rows.
+- **Matrix Light 6px X** (`MATRIX_LIGHT_6X`) — Light 6px with extended inter-character spacing.
+- **Matrix Chunky 6px** (`MATRIX_CHUNKY_6`) — bolder, blockier digit style at 6 rows. Open-top digit design gives a distinctive retro look.
+- **Matrix Chunky 6px X** (`MATRIX_CHUNKY_6X`) — Chunky 6px with extended inter-character spacing.
 
 > **4-module constraint:** `TIME_SECONDS` and `AM/PM` cannot be combined on 4-module builds — "12:34.56 PM" would exceed the 32-pixel display width. The interface prevents this combination automatically.
 
@@ -792,7 +808,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 This project relies on the excellent open-source libraries and tools from the Arduino/ESP community. Special thanks to:
 
 - **[MajicDesigns/MD_MAX72XX](https://github.com/MajicDesigns/MD_MAX72XX)** by Marco Colli - The foundational library for controlling MAX7219 LED matrix displays. This project uses MD_MAX72XX for driving LED matrix displays and would not be possible without this excellent work.
-- **[trip5/Matrix-Fonts](https://github.com/trip5/Matrix-Fonts)** by Trip5 / Conventional Chaos (CC-BY) - Source BDF bitmap fonts used to derive the Matrix Light 8px and Matrix Light 6px clock faces. The `MatrixLight8.bdf` and `MatrixLight6.bdf` files were converted to the MD_MAX72XX PROGMEM font format using the included `tools/bdf_to_parola.py` converter with FC16-hardware bit-ordering corrections.
+- **[trip5/Matrix-Fonts](https://github.com/trip5/Matrix-Fonts)** by Trip5 / Conventional Chaos (CC-BY) - Source BDF bitmap fonts used to derive all six custom clock faces (Matrix Light 8px, Matrix Light 8px X, Matrix Light 6px, Matrix Light 6px X, Matrix Chunky 6px, Matrix Chunky 6px X). The BDF files were converted to the MD_MAX72XX PROGMEM font format using the included `tools/bdf_to_parola.py` converter with FC16-hardware bit-ordering corrections.
 - **[MD_Parola](https://github.com/MajicDesigns/MD_Parola)** by Marco Colli - Scrolling text animation effects and display management for MAX7219 matrices, built on top of MD_MAX72XX.
 - **[WiFiManager](https://github.com/tzapu/WiFiManager)** by tzapu - WiFi configuration portal that makes initial device setup painless.
 - **[ArduinoJson](https://github.com/bblanchon/ArduinoJson)** by Benoit Blanchon - Efficient JSON parsing and serialization library.
@@ -870,6 +886,7 @@ The skill provides Python scripts and instructions for sending scrolling text me
 - [WiFiManager Library](https://github.com/tzapu/WiFiManager)
 - [Home Assistant MQTT Integration](https://www.home-assistant.io/integrations/mqtt/)
 - [NodeRed Documentation](https://nodered.org/docs/)
+- [trip5/Matrix-Fonts](https://github.com/trip5/Matrix-Fonts)
 
 
 ---

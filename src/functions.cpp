@@ -19,10 +19,19 @@
 #endif
 #include "chirp_library.h"
 #include "buzzer_utils.h"
-#include "MatrixLight8_font.h"
+// 6-series fonts (centred in 8-row display, compact height — good for 4-module clocks)
 #include "MatrixLight6_font.h"
+#include "MatrixLight6X_font.h"
+#include "MatrixChunky6_font.h"
+#include "MatrixChunky6X_font.h"
+// 8-series fonts (full 8-row height — best for 8-module clocks)
+#include "MatrixLight8_font.h"
+#include "MatrixLight8X_font.h"
 
 // Note: Buzzer and UTF-8 functions moved to buzzer_utils.cpp and utf8_utils.cpp
+
+// Forward declaration — defined further down, used in displayText() and displayClock()
+static MD_MAX72XX::fontType_t* getFontForFace(const char* face);
 
 // Returns the effective brightness value, considering override settings
 int getEffectiveBrightness(int requestedBrightness) {
@@ -190,10 +199,7 @@ void onMessageCallJson(String jsonMsgData){
 
 void displayText() {
   if (matrixFontTest) {
-    if (strcmp(clockConfig.clockFace, "MATRIX_LIGHT_6") == 0)
-      P.setFont(MatrixLight6Font);
-    else
-      P.setFont(MatrixLight8Font);
+    P.setFont(getFontForFace(clockConfig.clockFace));
     matrixFontTest = false;
   } else {
     P.setFont(nullptr);
@@ -690,14 +696,8 @@ void displayClock(bool withAnimation) {
   }
   #endif
 
-  // Select clock font — MATRIX_LIGHT uses the compact MatrixLight8 bitmap font
-  // which fits HH:MM:SS on a single screen.  DEFAULT uses the MD_Parola built-in.
-  if (strcmp(clockConfig.clockFace, "MATRIX_LIGHT") == 0)
-    P.setFont(MatrixLight8Font);
-  else if (strcmp(clockConfig.clockFace, "MATRIX_LIGHT_6") == 0)
-    P.setFont(MatrixLight6Font);
-  else
-    P.setFont(nullptr);
+  // Select clock font — custom bitmap fonts use getFontForFace(), DEFAULT uses built-in Parola font.
+  P.setFont(getFontForFace(clockConfig.clockFace));
 
   static char timeString[DATE_FORMAT_SIZE]; // Increased from [6]
 
@@ -1118,10 +1118,20 @@ void checkWiFiAndResync() {
   wasConnected = isConnected;
 }
 
-// True when clockFace is one of the Matrix Light bitmap fonts
+// Returns the MD_MAX72XX font pointer for the configured clock face (nullptr = built-in Parola font)
+static MD_MAX72XX::fontType_t* getFontForFace(const char* face) {
+  if (strcmp(face, "MATRIX_LIGHT")    == 0) return (MD_MAX72XX::fontType_t*)MatrixLight8Font;
+  if (strcmp(face, "MATRIX_LIGHT_6")  == 0) return (MD_MAX72XX::fontType_t*)MatrixLight6Font;
+  if (strcmp(face, "MATRIX_LIGHT_6X") == 0) return (MD_MAX72XX::fontType_t*)MatrixLight6XFont;
+  if (strcmp(face, "MATRIX_CHUNKY_6") == 0) return (MD_MAX72XX::fontType_t*)MatrixChunky6Font;
+  if (strcmp(face, "MATRIX_CHUNKY_6X")== 0) return (MD_MAX72XX::fontType_t*)MatrixChunky6XFont;
+  if (strcmp(face, "MATRIX_LIGHT_8X") == 0) return (MD_MAX72XX::fontType_t*)MatrixLight8XFont;
+  return nullptr; // DEFAULT or unknown → built-in Parola font
+}
+
+// True when clockFace is any custom bitmap font (not the built-in Parola DEFAULT)
 static bool isMatrixLightFace() {
-  return strcmp(clockConfig.clockFace, "MATRIX_LIGHT") == 0 ||
-         strcmp(clockConfig.clockFace, "MATRIX_LIGHT_6") == 0;
+  return getFontForFace(clockConfig.clockFace) != nullptr;
 }
 
 // Format clock display based on current alternate state and options

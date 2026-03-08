@@ -1525,7 +1525,13 @@ void handleClockResyncIntervalCommand(const char* payload) {
 void handleClockFaceCommand(const char* payload) {
   PRINT("\nHandling clock_face command: ", payload);
 
-  if (strcmp(payload, "DEFAULT") == 0 || strcmp(payload, "MATRIX_LIGHT") == 0 || strcmp(payload, "MATRIX_LIGHT_6") == 0) {
+  if (strcmp(payload, "DEFAULT")          == 0 ||
+      strcmp(payload, "MATRIX_LIGHT")     == 0 ||
+      strcmp(payload, "MATRIX_LIGHT_6")   == 0 ||
+      strcmp(payload, "MATRIX_LIGHT_6X")  == 0 ||
+      strcmp(payload, "MATRIX_CHUNKY_6")  == 0 ||
+      strcmp(payload, "MATRIX_CHUNKY_6X") == 0 ||
+      strcmp(payload, "MATRIX_LIGHT_8X")  == 0) {
     strlcpy(clockConfig.clockFace, payload, sizeof(clockConfig.clockFace));
     saveClockConfiguration(clockConfigFile, clockConfig);
     // Apply immediately if clock is currently displaying

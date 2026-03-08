@@ -370,6 +370,10 @@ void publishClockDiscoveries() {
     options.add("DEFAULT");
     options.add("MATRIX_LIGHT");
     options.add("MATRIX_LIGHT_6");
+    options.add("MATRIX_LIGHT_6X");
+    options.add("MATRIX_CHUNKY_6");
+    options.add("MATRIX_CHUNKY_6X");
+    options.add("MATRIX_LIGHT_8X");
     doc["icon"] = "mdi:clock-digital";
     doc["ent_cat"] = "config";
     addDeviceInfo(doc);
