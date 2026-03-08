@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- releases -->
 
+## [v1.3.0] - 2026-03-08
+
+### ✨ New Features
+- feat(clock): add four new bitmap clock faces with extended spacing - [556a983](https://github.com/rdeangel/rda_msg_board/commit/556a983)
+
 ## [v1.2.0] - 2026-03-08
 
 ### ✨ New Features
