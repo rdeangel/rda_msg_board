@@ -171,6 +171,7 @@ extern bool explicitBuzzerCount;
 extern bool newDelayAvailable;
 extern bool newBrightnessAvailable;
 extern bool newAsciiConvAvailable;
+extern bool matrixFontTest;   // true = next displayText() call uses MatrixLight8 font
 extern bool endSetupModeMsg;
 extern bool afterWiFiConfig;
 

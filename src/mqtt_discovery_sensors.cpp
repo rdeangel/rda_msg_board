@@ -1235,6 +1235,8 @@ void routeHACommand(const char* topic, const char* payload) {
     handleClockRandomizeCommand(payload);
   } else if (entity == "clock_resync_interval") {
     handleClockResyncIntervalCommand(payload);
+  } else if (entity == "clock_face") {
+    handleClockFaceCommand(payload);
   } else if (entity == "buzzer_enable") {
     handleBuzzerEnableCommand(payload);
   } else if (entity == "brightness_override_enable") {
@@ -1516,6 +1518,20 @@ void handleClockResyncIntervalCommand(const char* payload) {
   }
 }
 
+void handleClockFaceCommand(const char* payload) {
+  PRINT("\nHandling clock_face command: ", payload);
+
+  if (strcmp(payload, "DEFAULT") == 0 || strcmp(payload, "MATRIX_LIGHT") == 0 || strcmp(payload, "MATRIX_LIGHT_6") == 0) {
+    strlcpy(clockConfig.clockFace, payload, sizeof(clockConfig.clockFace));
+    saveClockConfiguration(clockConfigFile, clockConfig);
+    // Apply immediately if clock is currently displaying
+    if (currentDisplayMode == MODE_CLOCK) {
+      displayClock(false);
+    }
+    publishClockFaceState();
+  }
+}
+
 // ==============================================
 // Clock State Publishers
 // ==============================================
@@ -1626,6 +1642,14 @@ void publishClockResyncIntervalState() {
   PRINT("\nPublished clock_resync_interval state: ", clockConfig.resyncIntervalHours);
 }
 
+void publishClockFaceState() {
+  if (!mqttClient.connected() || strcmp(mqttHaDiscovery, "on") != 0 || !mqttDiscoveryPublished) return;
+  char topic[256];
+  buildStateTopic(topic, sizeof(topic), "clock_face");
+  mqttClient.publish(topic, clockConfig.clockFace, true);
+  PRINT("\nPublished clock_face state: ", clockConfig.clockFace);
+}
+
 void publishClockTimeState() {
   if (!mqttClient.connected() || strcmp(mqttHaDiscovery, "on") != 0 || !mqttDiscoveryPublished) return;
   char topic[256];
@@ -1715,6 +1739,7 @@ void publishAllClockStates() {
   publishClockTransitionEffectState();
   publishClockRandomizeState();
   publishClockResyncIntervalState();
+  publishClockFaceState();
   publishClockTimeState();
   publishClockNtpSyncedState();
   publishClockDisplayActiveState();

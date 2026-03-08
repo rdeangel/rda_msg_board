@@ -503,6 +503,7 @@ function populateDateFormatOptions() {
     dropdown.innerHTML = `
       <option value="TIME_ONLY">Time Only (HH:MM)</option>
       <option value="TIME_ALTERNATE">Time &#8596; Date Alternating</option>
+      <option value="TIME_SECONDS">Time with Seconds (HH:MM:SS)</option>
     `;
   } else if (maxDevices == 8) {
     dropdown.innerHTML = `
@@ -510,6 +511,7 @@ function populateDateFormatOptions() {
       <option value="FULL_DATE">Full Date (Day, Mon DD)</option>
       <option value="TIME_FULL_DATE">Time + Full Date</option>
       <option value="CUSTOM">Custom Format</option>
+      <option value="TIME_SECONDS">Time with Seconds (HH:MM:SS)</option>
     `;
   } else {
     dropdown.innerHTML = '<option value="TIME_ONLY">Time Only</option>';
@@ -531,6 +533,21 @@ function toggleDateFormatOptions() {
   } else {
     customContainer.style.display = 'none';
   }
+  // On 4-module builds, TIME_SECONDS requires Matrix Light font (only font that fits HH:MM.SS)
+  var clockFaceSelect = document.getElementById('CLOCKFACE');
+  var defaultOption = clockFaceSelect.querySelector('option[value="DEFAULT"]');
+  if (maxDevices == 4 && dateFormat === 'TIME_SECONDS') {
+    if (clockFaceSelect.value === 'DEFAULT') clockFaceSelect.value = 'MATRIX_LIGHT';
+    if (defaultOption) defaultOption.disabled = true;
+  } else {
+    if (defaultOption) defaultOption.disabled = false;
+  }
+}
+
+function testMatrixFont() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/matrixfonttest', true);
+  xhr.send();
 }
 
 // Clock Modal Functions
@@ -564,6 +581,7 @@ function openClockModal() {
         document.getElementById('DATEALTERNATESECONDS').value = getVal('datealternateseconds', '10');
         document.getElementById('dateAltVal').innerText = getVal('datealternateseconds', '10');
         document.getElementById('CUSTOMDATEFORMAT').value = getVal('customdateformat', '');
+        document.getElementById('CLOCKFACE').value = getVal('clockface', 'DEFAULT');
         toggleDateFormatOptions();
 
         var bri = getVal('brightness', '5');
@@ -1897,6 +1915,18 @@ window.onload = function() {
                oninput="document.getElementById('clockBriVal').innerText=this.value" style="flex: 1;">
         <span class="val-label" id="clockBriVal" style="min-width: 30px; text-align: right;">5</span>
       </div>
+
+      <!-- Clock Face / Font Selection -->
+      <label for="CLOCKFACE">Clock Face</label>
+      <select id="CLOCKFACE" name="ClockFace" style="width: 100%; padding: 12px; background: var(--input); border: 1px solid var(--border); color: #fff; border-radius: 6px; font-size: 1rem; margin-bottom: 5px;">
+        <option value="DEFAULT">Default</option>
+        <option value="MATRIX_LIGHT">Matrix Light 8px (compact, fits HH:MM:SS)</option>
+        <option value="MATRIX_LIGHT_6">Matrix Light 6px (centred, smallest)</option>
+      </select>
+      <p style="font-size: 0.85rem; color: var(--subtext); margin: -5px 0 8px 0;">
+        Matrix Light fonts use narrower bitmap glyphs. Pair with &ldquo;Time with Seconds&rdquo; below.
+      </p>
+      <button type="button" onclick="testMatrixFont()" style="padding: 6px 14px; background: var(--input); border: 1px solid var(--border); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.85rem; margin-bottom: 15px;">Preview Clock Face Font</button>
 
       <!-- Date Format Dropdown (module-aware) -->
       <label for="DATEFORMAT">Date Display Format</label>

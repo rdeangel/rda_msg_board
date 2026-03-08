@@ -233,6 +233,7 @@ struct clockConfigObj {
   char dateFormat[TIMER_MODE_SIZE];   // "TIME_ONLY", "TIME_FULL_DATE" etc. (max 14 chars)
   char dateAlternateSeconds[REP_SIZE]; // "5" (seconds)
   char customDateFormat[STDSIZE];     // Custom strftime format string (user text, keep large)
+  char clockFace[TIMER_MODE_SIZE];    // "DEFAULT" or "MATRIX_LIGHT"
 };
 
 #ifndef DISABLE_TIMER_FEATURE

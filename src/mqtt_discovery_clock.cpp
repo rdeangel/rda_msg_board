@@ -346,6 +346,33 @@ void publishClockDiscoveries() {
     mqttClient.publish(topic, payload, true);
     PRINT("\nPublished clock_resync_interval discovery to: ", topic);
   }
+
+  // Clock Face Select - font/display style
+  {
+    JsonDocument doc;
+    char baseTopic[256];
+    snprintf(baseTopic, sizeof(baseTopic), "%s/ha", mqttTopicDevice);
+    doc["~"] = baseTopic;
+    doc["name"] = "Clock Face";
+    doc["uniq_id"] = String(haBaseTopic) + "_clock_face";
+    doc["cmd_t"] = "~/clock_face/set";
+    doc["stat_t"] = "~/clock_face/state";
+    JsonArray options = doc["options"].to<JsonArray>();
+    options.add("DEFAULT");
+    options.add("MATRIX_LIGHT");
+    options.add("MATRIX_LIGHT_6");
+    doc["icon"] = "mdi:clock-digital";
+    doc["ent_cat"] = "config";
+    addDeviceInfo(doc);
+    addAvailability(doc);
+    char topic[256];
+    buildDiscoveryTopic(topic, sizeof(topic), "select", "clock_face");
+    char payload[1024];
+    serializeJson(doc, payload, sizeof(payload));
+    mqttClient.publish(topic, payload, true);
+    PRINT("\nPublished clock_face discovery to: ", topic);
+  }
+  delay(20);
 }
 
 // ============================================================================

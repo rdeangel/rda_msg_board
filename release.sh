@@ -101,6 +101,15 @@ push_all() {
         git push "$remote" main
         if [ -n "$tag" ]; then
             git push "$remote" "$tag"
+        if git remote | grep -q "^${remote}$"; then
+            print_status "Pushing to ${remote}..."
+            git push "$remote" main
+            if [ -n "$tag" ]; then
+                git push "$remote" "$tag"
+            fi
+            print_success "  ✅ ${remote} done"
+        else
+            print_warning "Remote '${remote}' not found, skipping."
         fi
         print_success "  ✅ ${remote} done"
     done

@@ -709,7 +709,8 @@ void httpWebDirDef() {
     json += "    \"transitionDelayMs\": "; addString(clockConfig.transitionDelayMs); json += ",\n";
     json += "    \"transitionEffect\": "; addString(clockConfig.transitionEffect); json += ",\n";
     json += "    \"randomizeTransition\": "; addString(clockConfig.randomizeTransition); json += ",\n";
-    json += "    \"resyncIntervalHours\": "; addString(clockConfig.resyncIntervalHours); json += "\n";
+    json += "    \"resyncIntervalHours\": "; addString(clockConfig.resyncIntervalHours); json += ",\n";
+    json += "    \"clockFace\": "; addString(clockConfig.clockFace); json += "\n";
     json += "  },\n";
 
 #ifndef DISABLE_TIMER_FEATURE
@@ -929,6 +930,7 @@ void httpWebDirDef() {
       if (!clock["transitionEffect"].isNull()) strlcpy(clockConfig.transitionEffect, clock["transitionEffect"], sizeof(clockConfig.transitionEffect));
       if (!clock["randomizeTransition"].isNull()) strlcpy(clockConfig.randomizeTransition, clock["randomizeTransition"], sizeof(clockConfig.randomizeTransition));
       if (!clock["resyncIntervalHours"].isNull()) strlcpy(clockConfig.resyncIntervalHours, clock["resyncIntervalHours"], sizeof(clockConfig.resyncIntervalHours));
+      if (!clock["clockFace"].isNull()) strlcpy(clockConfig.clockFace, clock["clockFace"], sizeof(clockConfig.clockFace));
       saveClockConfiguration(clockConfigFile, clockConfig);
 
       // Reinitialize NTP if clock enabled
@@ -1180,6 +1182,8 @@ void httpWebDirDef() {
         argValue.toCharArray(clockConfig.dateAlternateSeconds, sizeof(clockConfig.dateAlternateSeconds));
       } else if (argName == "CustomDateFormat") {
         argValue.toCharArray(clockConfig.customDateFormat, sizeof(clockConfig.customDateFormat));
+      } else if (argName == "ClockFace") {
+        argValue.toCharArray(clockConfig.clockFace, sizeof(clockConfig.clockFace));
       } else if (argName == "ClockBrightness") {
         argValue.toCharArray(clockConfig.brightness, sizeof(clockConfig.brightness));
         clockBrightness = argValue.toInt();
@@ -1271,6 +1275,29 @@ void httpWebDirDef() {
     }
 
     serverHttp.send(200, "text/plain", "OK");
+  });
+
+  // MatrixLight8 font character test — scrolls all converted glyphs once
+  serverHttp.on("/matrixfonttest", HTTP_GET, []() {
+    if (!serverHttp.authenticate(web_username, web_password)) {
+      return serverHttp.requestAuthentication();
+    }
+    repeatCount = 0;
+    strcpy(newMessage, "0123456789 AaBbCcDd EeFfGg HhIiJj KkLlMm NnOoPp QqRrSs TtUuVv WwXxYy Zz !?+-:.");
+    strcpy(newRepeat, "1");
+    strcpy(newBuz, "0");
+    strcpy(newDelay, scrollDelayDefault);
+    strcpy(newBrightness, ledBrightnessDefault);
+    strcpy(newAsciiConv, "0");
+    newMessageAvailable = true;
+    newRepeatAvailable = true;
+    newBuzAvailable = true;
+    newDelayAvailable = true;
+    newBrightnessAvailable = true;
+    newAsciiConvAvailable = true;
+    explicitBuzzerCount = true;
+    matrixFontTest = true;
+    serverHttp.send(204, "");
   });
 
   // Timer configuration endpoints

@@ -398,6 +398,8 @@ void loadClockConfiguration(const char *configFile, clockConfigObj &config) {
     strlcpy(config.dateAlternateSeconds, doc["dateAlternateSeconds"], sizeof(config.dateAlternateSeconds));
   if (!doc["customDateFormat"].isNull())
     strlcpy(config.customDateFormat, doc["customDateFormat"], sizeof(config.customDateFormat));
+  if (!doc["clockFace"].isNull())
+    strlcpy(config.clockFace, doc["clockFace"], sizeof(config.clockFace));
 
   file.close();
 }
@@ -423,6 +425,7 @@ void saveClockConfiguration(const char *configFile, const clockConfigObj &config
   doc["dateFormat"] = config.dateFormat;
   doc["dateAlternateSeconds"] = config.dateAlternateSeconds;
   doc["customDateFormat"] = config.customDateFormat;
+  doc["clockFace"] = config.clockFace;
 
   if (serializeJson(doc, file) == 0) {
     Serial.println(F("Failed to write clock config file"));
@@ -467,6 +470,11 @@ void initClockStoreConfig() {
 
   if (clockConfig.dateAlternateSeconds[0] == '\0') {
     strlcpy(clockConfig.dateAlternateSeconds, "5", sizeof(clockConfig.dateAlternateSeconds));
+    saveAtStart = true;
+  }
+
+  if (clockConfig.clockFace[0] == '\0') {
+    strlcpy(clockConfig.clockFace, "DEFAULT", sizeof(clockConfig.clockFace));
     saveAtStart = true;
   }
 

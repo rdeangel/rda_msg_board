@@ -19,6 +19,8 @@
 #endif
 #include "chirp_library.h"
 #include "buzzer_utils.h"
+#include "MatrixLight8_font.h"
+#include "MatrixLight6_font.h"
 
 // Note: Buzzer and UTF-8 functions moved to buzzer_utils.cpp and utf8_utils.cpp
 
@@ -187,7 +189,15 @@ void onMessageCallJson(String jsonMsgData){
 }
 
 void displayText() {
-  P.setFont(nullptr);
+  if (matrixFontTest) {
+    if (strcmp(clockConfig.clockFace, "MATRIX_LIGHT_6") == 0)
+      P.setFont(MatrixLight6Font);
+    else
+      P.setFont(MatrixLight8Font);
+    matrixFontTest = false;
+  } else {
+    P.setFont(nullptr);
+  }
   #ifndef DISABLE_SLEEP_MODE_FEATURE
   // Only blackout if sleep mode is active, NOT in mute-only mode, AND time is synced.
   // This ensures boot messages are visible even if sleep mode is 'active' as a fail-safe.
@@ -679,7 +689,16 @@ void displayClock(bool withAnimation) {
     return;
   }
   #endif
-  P.setFont(nullptr);
+
+  // Select clock font — MATRIX_LIGHT uses the compact MatrixLight8 bitmap font
+  // which fits HH:MM:SS on a single screen.  DEFAULT uses the MD_Parola built-in.
+  if (strcmp(clockConfig.clockFace, "MATRIX_LIGHT") == 0)
+    P.setFont(MatrixLight8Font);
+  else if (strcmp(clockConfig.clockFace, "MATRIX_LIGHT_6") == 0)
+    P.setFont(MatrixLight6Font);
+  else
+    P.setFont(nullptr);
+
   static char timeString[DATE_FORMAT_SIZE]; // Increased from [6]
 
   getFormattedTime(timeString, sizeof(timeString), true);
@@ -1118,6 +1137,8 @@ void formatClockDate(char* buffer, size_t bufferSize, const char* format) {
       } else {
         strftimeFormat = clockColonVisible ? "%H:%M" : "%H %M";
       }
+    } else if (strcmp(format, "TIME_SECONDS") == 0) {
+      strftimeFormat = "%H:%M.%S";  // Colon always visible — seconds already show time passing
     }
   #elif MAX_DEVICES == 8
     if (strcmp(format, "TIME_DATE") == 0) {
@@ -1128,6 +1149,8 @@ void formatClockDate(char* buffer, size_t bufferSize, const char* format) {
       strftimeFormat = clockColonVisible ? "%H:%M %a %b %e" : "%H %M %a %b %e";
     } else if (strcmp(format, "CUSTOM") == 0) {
       strftimeFormat = clockConfig.customDateFormat;
+    } else if (strcmp(format, "TIME_SECONDS") == 0) {
+      strftimeFormat = "%H:%M.%S";  // Colon always visible — seconds already show time passing
     }
   #endif
 
@@ -1147,7 +1170,8 @@ void formatClockDate(char* buffer, size_t bufferSize, const char* format) {
 // Get formatted time/date based on configuration
 void getFormattedTime(char* buffer, size_t bufferSize, bool includeDate) {
   #if MAX_DEVICES == 4
-    if (strcmp(clockConfig.dateFormat, "TIME_ALTERNATE") == 0) {
+    if (strcmp(clockConfig.dateFormat, "TIME_ALTERNATE") == 0 ||
+        strcmp(clockConfig.dateFormat, "TIME_SECONDS") == 0) {
       formatClockDate(buffer, bufferSize, clockConfig.dateFormat);
     } else {
       formatClockDate(buffer, bufferSize, "TIME_ONLY");

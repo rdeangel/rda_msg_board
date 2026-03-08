@@ -19,6 +19,7 @@ void publishClockTransitionSpeedState();
 void publishClockTransitionEffectState();
 void publishClockRandomizeState();
 void publishClockResyncIntervalState();
+void publishClockFaceState();
 void publishClockTimeState();
 void publishClockNtpSyncedState();
 void publishClockDisplayActiveState();
@@ -54,5 +55,6 @@ void handleClockTransitionSpeedCommand(const char* payload);
 void handleClockTransitionEffectCommand(const char* payload);
 void handleClockRandomizeCommand(const char* payload);
 void handleClockResyncIntervalCommand(const char* payload);
+void handleClockFaceCommand(const char* payload);
 
 #endif // MQTT_DISCOVERY_CLOCK_H

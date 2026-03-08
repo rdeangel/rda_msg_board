@@ -175,6 +175,7 @@ bool explicitBuzzerCount = false;
 bool newDelayAvailable = false;
 bool newBrightnessAvailable = false;
 bool newAsciiConvAvailable = false;
+bool matrixFontTest = false;
 bool endSetupModeMsg = false;
 bool afterWiFiConfig = false;
 
