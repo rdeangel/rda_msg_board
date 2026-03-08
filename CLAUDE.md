@@ -12,24 +12,24 @@ Originally developed for Arduino IDE, now uses PlatformIO for dependency managem
 
 ### Building and Uploading Firmware
 
-**PlatformIO CLI** (requires full path on Windows):
+**PlatformIO CLI** (not in global PATH — use full path or `~/.platformio/penv/bin/platformio`):
 ```bash
 # ESP8266 builds
-platformio run --target upload --environment d1_mini
-platformio run --target upload --environment nodemcuv2
+~/.platformio/penv/bin/platformio run --target upload --environment d1_mini
+~/.platformio/penv/bin/platformio run --target upload --environment nodemcuv2
 
 # ESP32 builds
-platformio run --target upload --environment esp32dev
+~/.platformio/penv/bin/platformio run --target upload --environment esp32dev
 
 # CI/Release builds (6 env variants)
 # ESP8266 variants
-platformio run --environment nodemcu_4m
-platformio run --environment nodemcu_8m
-platformio run --environment d1_mini_4m
-platformio run --environment d1_mini_8m
+~/.platformio/penv/bin/platformio run --environment nodemcu_4m
+~/.platformio/penv/bin/platformio run --environment nodemcu_8m
+~/.platformio/penv/bin/platformio run --environment d1_mini_4m
+~/.platformio/penv/bin/platformio run --environment d1_mini_8m
 # ESP32 variants
-platformio run --environment esp32_4m
-platformio run --environment esp32_8m
+~/.platformio/penv/bin/platformio run --environment esp32_4m
+~/.platformio/penv/bin/platformio run --environment esp32_8m
 ```
 
 **VS Code PlatformIO Extension**:
@@ -44,12 +44,20 @@ platformio run --environment esp32_8m
 Update version in `platformio.ini` `[common]` section first, then:
 
 ```bash
-# Linux/Mac/Git Bash
+# Preview what would happen — no commits or pushes made
+./release.sh --dry-run
+
+# Create release (commits, tags, updates CHANGELOG, pushes to origin + github)
 ./release.sh "Release notes"
+
+# Force-recreate an existing tag (e.g. after last-minute fixes)
 ./release.sh --force
+
+# Skip CHANGELOG regeneration
+./release.sh --no-changelog
 ```
 
-Automatically creates git tag, pushes to GitHub, and triggers CI builds for all 4 platform/module variants.
+Automatically creates annotated git tag, updates `CHANGELOG.md` from conventional commits, pushes to both Forgejo (`origin`) and GitHub (`github`) remotes, triggers CI builds for all 6 platform/module variants.
 
 ### Testing APIs
 
@@ -109,30 +117,41 @@ mosquitto_pub -h broker.local -t "rdadotmatrix/json" -m '{"MSG":""}'
 - `mqtt.cpp` - PubSubClient wrapper, connection management, TLS support (ESP32)
 - `mqtt_discovery_*.cpp` - Home Assistant MQTT Discovery entities
   - `core`: Base topics, device registry
-  - `sensors`: Text, Light, Switch entities
-  - `clock`: Clock-specific entities
+  - `sensors`: Text, Light, Switch entities + `publishAllClockStates()`
+  - `clock`: Clock entities + recurrent alarm entities
   - `timer`: Timer/stopwatch entities (disabled on ESP8266 by default via `-DDISABLE_TIMER_FEATURE`)
+  - `sleep`: Sleep mode entities
+  - `weather`: Weather entities (disabled on all ESP8266 builds via `-DDISABLE_WEATHER_FEATURE`)
 
 **Core Logic**:
-- `functions.cpp` - Message processing, display control, NTP time sync
+- `functions.cpp` - Message processing, display control, NTP time sync, clock rendering
 - `utf8_utils.cpp` - UTF-8 to extended ASCII conversion
-- `buzzer_utils.cpp` - Audio feedback patterns
-- `timer.cpp` - Countdown timer/stopwatch logic (disabled on ESP8266 by default via `-DDISABLE_TIMER_FEATURE`)
+- `buzzer_utils.cpp` - Audio feedback patterns (chirp library)
+- `timer.cpp` - Countdown timer/stopwatch logic
 - `main.cpp` - Entry point, initialization sequence
+
+**Font Files** (PROGMEM, flash only — no RAM cost):
+- `include/MatrixLight8_font.h` - Compact 8px Matrix Light font
+- `include/MatrixLight6_font.h` - Compact 6px Matrix Light font
 
 ### Configuration System
 
-**Four Configuration Files** (stored in LittleFS flash):
+**Configuration Files** (stored in LittleFS flash):
 1. `/web_config.json` - Web credentials (username/password) and device hostname
 2. `/mqtt_config.json` - MQTT server, port, auth, TLS, topic prefix
 3. `/defaults_config.json` - Default message parameters (REP, BUZ, DEL, BRI, ASC)
 4. `/general.config` - Global buzzer enable/disable, brightness override
+5. `/clock.config` - Clock settings (NTP, timezone, face, transitions, AM/PM, date alternation)
+6. `/timer.config` - Timer/stopwatch settings (disabled on ESP8266 by default)
+7. `/sleep_mode.config` - Sleep schedule settings
+8. `/alarm.config` - Recurrent alarm settings
 
 **Configuration Flow**:
 1. Boot: `main.cpp` calls `init*StoreConfig()` from `config_manager.cpp`
-2. Load: JSON files read from LittleFS into global structs
-3. Runtime: Modules read from global config structs (defined in `globals.h/cpp`)
-4. Update: Web UI → `web_server.cpp` → `config_manager::saveConfiguration()` → Updates JSON + globals
+2. **Deferred loading on ESP8266**: only `initDefaultsStoreConfig()` and `initGeneralStoreConfig()` run before `wm.autoConnect()`. All other configs (web, MQTT, clock, timer, etc.) load after WiFiManager finishes — this preserves heap for the WiFiManager captive portal page.
+3. Load: JSON files read from LittleFS into global structs
+4. Runtime: Modules read from global config structs (defined in `globals.h/cpp`)
+5. Update: Web UI → `web_server.cpp` → `config_manager::saveConfiguration()` → Updates JSON + globals
 
 ### Pin Configuration
 
@@ -165,7 +184,13 @@ build_flags =
 **Configuration**:
 - `DEFAULT_WEB_USER` / `DEFAULT_WEB_PASS` - Initial web credentials (admin/msgboard)
 - `ENABLE_FLASH_BUTTON` - Factory reset button on GPIO0 (default: 0, ESP8266 only)
-- `DISABLE_TIMER_FEATURE` - Exclude timer/stopwatch code (define to disable)
+
+**Feature Flags** (define to disable feature):
+- `DISABLE_TIMER_FEATURE` - Exclude timer/stopwatch code (commented out by default — timer IS enabled)
+- `DISABLE_WEATHER_FEATURE` - Exclude weather code (**enabled by default on all ESP8266 builds**)
+- `DISABLE_SLEEP_MODE_FEATURE` - Exclude sleep mode code
+- `DISABLE_ALARM_FEATURE` - Exclude recurrent alarm code
+- `DISABLE_HA_CLOCK_ADVANCED` - Skip 7 verbose HA clock discovery entities (**enabled by default on all ESP8266 builds** to reduce heap pressure; entities still configurable via web UI)
 
 **Debugging**:
 - `DEBUG` - Enable serial output (define as 1)
@@ -200,6 +225,16 @@ All routes defined in `web_server.cpp:httpWebDirDef()`:
 3. **Display**: `functions.cpp:scrollTextParola()` - Main display loop
 4. **UTF-8 Conversion**: `utf8_utils.cpp:utf8Ascii()` - Character mapping for international chars
 
+### Clock Features
+
+The clock subsystem (`functions.cpp`) supports:
+- **Clock Faces**: `DEFAULT` (built-in font), `MATRIX_LIGHT` (MatrixLight8 PROGMEM font), `MATRIX_LIGHT_6` (MatrixLight6 PROGMEM font)
+- **AM/PM Mode**: 12-hour display with AM/PM suffix (`clockConfig.clockAmPm`)
+- **Date Alternation**: 3-state cycle: time → day-of-week → date, controlled by `clockAlternateState` (int 0/1/2) and `clockConfig.dateAlternate`/`dateAlternateSeconds`
+- **Date Formats**: `TIME_ONLY`, `TIME_SECONDS` (4-module); `TIME_DATE`, `FULL_DATE`, `TIME_FULL_DATE`, `CUSTOM`, `TIME_SECONDS` (8-module)
+- **POSIX Timezone**: Full POSIX TZ string support (e.g. `EST5EDT,M3.2.0,M11.1.0`)
+- **NTP Resync**: Configurable interval in hours
+
 ### MQTT Topics
 
 Device subscribes to (where prefix = configured topic, device = RDA-MSG-XXXXXX):
@@ -223,14 +258,25 @@ Device publishes:
 
 MQTT Discovery topics published at startup (when MQTT enabled):
 ```
-homeassistant/text/{device}_message/config        # Message input
-homeassistant/number/{device}_repeat/config       # Repeat count
-homeassistant/number/{device}_buzzer/config       # Buzzer chirps
-homeassistant/number/{device}_speed/config        # Scroll delay
-homeassistant/light/{device}_brightness/config    # LED brightness
+homeassistant/text/{device}_message/config         # Message input
+homeassistant/number/{device}_repeat/config        # Repeat count
+homeassistant/number/{device}_buzzer/config        # Buzzer chirps
+homeassistant/number/{device}_speed/config         # Scroll delay
+homeassistant/light/{device}_brightness/config     # LED brightness
 homeassistant/switch/{device}_display_power/config # Display on/off
 homeassistant/switch/{device}_buzzer_power/config  # Global buzzer enable
-... (additional clock, timer, sensor entities)
+homeassistant/switch/{device}_clock_enable/config  # Clock on/off
+homeassistant/number/{device}_clock_brightness/config
+homeassistant/select/{device}_clock_face/config    # DEFAULT/MATRIX_LIGHT/MATRIX_LIGHT_6
+homeassistant/select/{device}_clock_date_format/config
+homeassistant/switch/{device}_clock_date_alternate_enable/config
+homeassistant/switch/{device}_clock_ampm/config
+# ESP32 only (DISABLE_HA_CLOCK_ADVANCED not set):
+homeassistant/number/{device}_clock_transition_speed/config
+homeassistant/select/{device}_clock_transition_effect/config
+homeassistant/text/{device}_clock_ntp_server/config
+homeassistant/text/{device}_clock_custom_tz/config
+... (timer, alarm, sleep entities)
 ```
 
 Published by `mqtt_discovery_*.cpp` modules on MQTT connection.
@@ -266,24 +312,20 @@ build_flags =
     -DDEBUG=1
 ```
 
-Or define in `include/config.h`:
-```cpp
-#define DEBUG 1
-```
-
 ### Disabling Optional Features
 
-**Timer/Stopwatch** (disabled on ESP8266 by default, can be enabled):
 ```ini
 build_flags =
     -DDISABLE_TIMER_FEATURE
+    -DDISABLE_WEATHER_FEATURE    # already on by default for ESP8266
+    -DDISABLE_SLEEP_MODE_FEATURE
+    -DDISABLE_ALARM_FEATURE
+    -DDISABLE_HA_CLOCK_ADVANCED  # already on by default for ESP8266
 ```
 
-**Flash Button** (ESP8266):
-Edit `include/config.h`:
-```cpp
-#define ENABLE_FLASH_BUTTON 1  // 0 = disabled (default)
-```
+### Re-enabling Advanced HA Clock Entities on ESP8266
+
+Remove `-DDISABLE_HA_CLOCK_ADVANCED` from the environment's `build_flags` in `platformio.ini`. Note: this increases heap pressure and may cause intermittent WiFiManager portal rendering failures.
 
 ### Modifying Web Pages
 
@@ -296,16 +338,18 @@ Pages use AJAX with XML responses (generated by `web_data.cpp`).
 
 ### Adding New Configuration Values
 
-1. Add field to config struct in `include/globals.h`
+1. Add field to config struct in `include/config.h`
 2. Update `config_manager.cpp` save/load functions (JSON serialization)
 3. Add form field in appropriate `web_pages_*.cpp` file
 4. Add save handler in `web_server.cpp`
 5. Generate XML response in `web_data.cpp` if needed
+6. Update `/exportconfig` and `/importconfig` handlers in `web_server.cpp`
+7. Add HA discovery entity in `mqtt_discovery_*.cpp` if needed
 
 ## Known Issues & Limitations
 
 ### Build Environment
-- PlatformIO CLI not in global PATH on Windows (use full path or VS Code extension)
+- PlatformIO CLI not in global PATH — use `~/.platformio/penv/bin/platformio`
 - Serial monitor must be closed before uploading firmware
 
 ### Hardware
@@ -317,14 +361,21 @@ Pages use AJAX with XML responses (generated by `web_data.cpp`).
 - WiFi credentials changes require manual reconnection (WiFiManager by design)
 - mDNS hostname resolution may not work on all networks (use IP as fallback)
 
+### ESP8266 Memory
+- Static RAM at ~70% (57KB / 81KB) leaving ~24KB heap. WiFiManager portal page needs contiguous heap to render completely
+- `DISABLE_HA_CLOCK_ADVANCED` and `DISABLE_WEATHER_FEATURE` are **on by default** for all ESP8266 builds to relieve heap pressure
+- `haLastMessage` buffer is 256 bytes on ESP8266 (vs MSG_SIZE=1024 on ESP32)
+- Config loading is deferred: only defaults + general configs load before WiFiManager; all others (web, MQTT, clock, etc.) load after
+
 ### Configuration
-- MQTT buffer limited to 4096 bytes (configurable via `MQTT_MAX_PACKET_SIZE` build flag)
+- MQTT buffer limited to 1024 bytes (`MQTT_MAX_PACKET_SIZE=1024` in common build flags)
 - Very long messages may cause display buffer issues (keep messages reasonable length)
 
 ### Platform Differences
-- **Timer/Stopwatch**: Multi-platform, disabled on ESP8266 by default via `-DDISABLE_TIMER_FEATURE` build flag
+- **Timer/Stopwatch**: Multi-platform, timer IS enabled by default on ESP8266 (un-comment `-DDISABLE_TIMER_FEATURE` to disable)
 - **MQTT TLS/SSL**: ESP32 only (requires `WiFiClientSecure`)
 - **Flash Button**: ESP8266 only (ESP32 could support but not implemented)
+- **Advanced HA Clock Entities**: ESP32 only by default (gated by `DISABLE_HA_CLOCK_ADVANCED` on ESP8266)
 
 ## Default Credentials & Access
 
@@ -365,7 +416,7 @@ Detailed documentation in `docs/` directory:
 **Single source of truth**: `platformio.ini` `[common]` section:
 ```ini
 [common]
-version = v0.9.2
+version = v1.2.0
 ```
 
 All environments inherit via `${common.version}` in build flags:
