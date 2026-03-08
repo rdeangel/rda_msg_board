@@ -203,7 +203,7 @@ int brightnessOverrideValue = 8;
 
 // Clock date display state
 unsigned long lastDateAlternate = 0;
-bool showingDate = false;
+int clockAlternateState = 0;  // 0=time, 1=day-of-week, 2=date
 char clockDateBuffer[DATE_FORMAT_SIZE] = "";
 
 #ifndef DISABLE_TIMER_FEATURE

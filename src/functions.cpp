@@ -1118,7 +1118,13 @@ void checkWiFiAndResync() {
   wasConnected = isConnected;
 }
 
-// Format date based on configured format option
+// True when clockFace is one of the Matrix Light bitmap fonts
+static bool isMatrixLightFace() {
+  return strcmp(clockConfig.clockFace, "MATRIX_LIGHT") == 0 ||
+         strcmp(clockConfig.clockFace, "MATRIX_LIGHT_6") == 0;
+}
+
+// Format clock display based on current alternate state and options
 void formatClockDate(char* buffer, size_t bufferSize, const char* format) {
   time_t now = time(nullptr);
   struct tm* timeinfo = localtime(&now);
@@ -1129,30 +1135,50 @@ void formatClockDate(char* buffer, size_t bufferSize, const char* format) {
   }
 
   const char* strftimeFormat = nullptr;
+  bool ampm = strcmp(clockConfig.clockAmPm, "on") == 0;
 
-  #if MAX_DEVICES == 4
-    if (strcmp(format, "TIME_ONLY") == 0 || strcmp(format, "TIME_ALTERNATE") == 0) {
-      if (showingDate) {
-        strftimeFormat = "%b %e";  // "Jan  6"
+  // When date alternation is active, states 1 and 2 override the time format
+  if (strcmp(clockConfig.dateAlternate, "on") == 0) {
+    if (clockAlternateState == 1) {
+      // Day-of-week step — only reached when Matrix Light font is active
+      strftimeFormat = "%A";  // "Monday"
+    } else if (clockAlternateState == 2) {
+      strftimeFormat = "%b %e";  // "Jan  6"
+    }
+  }
+
+  // State 0 (or alternation off): show time in the selected format
+  if (strftimeFormat == nullptr) {
+    #if MAX_DEVICES == 4
+      if (strcmp(format, "TIME_SECONDS") == 0) {
+        strftimeFormat = "%H:%M.%S";  // AM/PM + seconds exceeds 32px on 4m — always 24h
       } else {
-        strftimeFormat = clockColonVisible ? "%H:%M" : "%H %M";
+        // TIME_ONLY (and any other format on 4m)
+        if (ampm)
+          strftimeFormat = clockColonVisible ? "%I:%M %p" : "%I %M %p";
+        else
+          strftimeFormat = clockColonVisible ? "%H:%M" : "%H %M";
       }
-    } else if (strcmp(format, "TIME_SECONDS") == 0) {
-      strftimeFormat = "%H:%M.%S";  // Colon always visible — seconds already show time passing
-    }
-  #elif MAX_DEVICES == 8
-    if (strcmp(format, "TIME_DATE") == 0) {
-      strftimeFormat = clockColonVisible ? "%H:%M %b %e" : "%H %M %b %e";
-    } else if (strcmp(format, "FULL_DATE") == 0) {
-      strftimeFormat = "%a %b %e %Y";  // "Mon Jan  6 2026"
-    } else if (strcmp(format, "TIME_FULL_DATE") == 0) {
-      strftimeFormat = clockColonVisible ? "%H:%M %a %b %e" : "%H %M %a %b %e";
-    } else if (strcmp(format, "CUSTOM") == 0) {
-      strftimeFormat = clockConfig.customDateFormat;
-    } else if (strcmp(format, "TIME_SECONDS") == 0) {
-      strftimeFormat = "%H:%M.%S";  // Colon always visible — seconds already show time passing
-    }
-  #endif
+    #elif MAX_DEVICES == 8
+      if (strcmp(format, "TIME_DATE") == 0) {
+        strftimeFormat = clockColonVisible ? "%H:%M %b %e" : "%H %M %b %e";
+      } else if (strcmp(format, "FULL_DATE") == 0) {
+        strftimeFormat = "%a %b %e %Y";
+      } else if (strcmp(format, "TIME_FULL_DATE") == 0) {
+        strftimeFormat = clockColonVisible ? "%H:%M %a %b %e" : "%H %M %a %b %e";
+      } else if (strcmp(format, "CUSTOM") == 0) {
+        strftimeFormat = clockConfig.customDateFormat;
+      } else if (strcmp(format, "TIME_SECONDS") == 0) {
+        strftimeFormat = ampm ? "%I:%M.%S %p" : "%H:%M.%S";
+      } else {
+        // TIME_ONLY
+        if (ampm)
+          strftimeFormat = clockColonVisible ? "%I:%M %p" : "%I %M %p";
+        else
+          strftimeFormat = clockColonVisible ? "%H:%M" : "%H %M";
+      }
+    #endif
+  }
 
   if (strftimeFormat == nullptr) {
     strftimeFormat = clockColonVisible ? "%H:%M" : "%H %M";  // Fallback
@@ -1165,38 +1191,42 @@ void formatClockDate(char* buffer, size_t bufferSize, const char* format) {
   while ((doubleSpace = strstr(buffer, "  ")) != nullptr) {
     memmove(doubleSpace, doubleSpace + 1, strlen(doubleSpace));
   }
+
+#if MAX_DEVICES == 4
+  // Truncate long day names to fit 32px display (e.g. "Wednesday" → "Wednes.y")
+  if (clockAlternateState == 1 && strlen(buffer) > 7) {
+    char last = buffer[strlen(buffer) - 1];
+    buffer[6] = '.';
+    buffer[7] = last;
+    buffer[8] = '\0';
+  }
+#endif
 }
 
 // Get formatted time/date based on configuration
 void getFormattedTime(char* buffer, size_t bufferSize, bool includeDate) {
-  #if MAX_DEVICES == 4
-    if (strcmp(clockConfig.dateFormat, "TIME_ALTERNATE") == 0 ||
-        strcmp(clockConfig.dateFormat, "TIME_SECONDS") == 0) {
-      formatClockDate(buffer, bufferSize, clockConfig.dateFormat);
-    } else {
-      formatClockDate(buffer, bufferSize, "TIME_ONLY");
-    }
-  #elif MAX_DEVICES == 8
-    formatClockDate(buffer, bufferSize, clockConfig.dateFormat);
-  #else
-    formatClockDate(buffer, bufferSize, "TIME_ONLY");
-  #endif
+  formatClockDate(buffer, bufferSize, clockConfig.dateFormat);
 }
 
-// Update date alternate timer (4-module only)
+// Advance alternate state and return true when display needs redraw
 bool updateDateAlternate() {
-  #if MAX_DEVICES == 4
-    if (strcmp(clockConfig.dateFormat, "TIME_ALTERNATE") != 0) {
-      return false;
-    }
+  if (strcmp(clockConfig.dateAlternate, "on") != 0) {
+    return false;
+  }
 
-    unsigned long interval = (unsigned long)atoi(clockConfig.dateAlternateSeconds) * 1000UL;
-    if (millis() - lastDateAlternate >= interval) {
-      showingDate = !showingDate;
-      lastDateAlternate = millis();
-      return true;  // Needs redraw
+  unsigned long interval = (unsigned long)atoi(clockConfig.dateAlternateSeconds) * 1000UL;
+  if (millis() - lastDateAlternate >= interval) {
+    lastDateAlternate = millis();
+
+    if (isMatrixLightFace()) {
+      // 3-step cycle: time → day-of-week → date → time
+      clockAlternateState = (clockAlternateState + 1) % 3;
+    } else {
+      // 2-step cycle: time ↔ date
+      clockAlternateState = (clockAlternateState == 0) ? 2 : 0;
     }
-  #endif
+    return true;
+  }
   return false;
 }
 

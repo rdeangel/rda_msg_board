@@ -394,12 +394,22 @@ void loadClockConfiguration(const char *configFile, clockConfigObj &config) {
     strlcpy(config.transitionSpeed, doc["transitionSpeed"], sizeof(config.transitionSpeed));
   if (!doc["dateFormat"].isNull())
     strlcpy(config.dateFormat, doc["dateFormat"], sizeof(config.dateFormat));
+  if (!doc["dateAlternate"].isNull())
+    strlcpy(config.dateAlternate, doc["dateAlternate"], sizeof(config.dateAlternate));
   if (!doc["dateAlternateSeconds"].isNull())
     strlcpy(config.dateAlternateSeconds, doc["dateAlternateSeconds"], sizeof(config.dateAlternateSeconds));
   if (!doc["customDateFormat"].isNull())
     strlcpy(config.customDateFormat, doc["customDateFormat"], sizeof(config.customDateFormat));
   if (!doc["clockFace"].isNull())
     strlcpy(config.clockFace, doc["clockFace"], sizeof(config.clockFace));
+  if (!doc["clockAmPm"].isNull())
+    strlcpy(config.clockAmPm, doc["clockAmPm"], sizeof(config.clockAmPm));
+
+  // Migration: TIME_ALTERNATE format → TIME_ONLY + dateAlternate=on
+  if (strcmp(config.dateFormat, "TIME_ALTERNATE") == 0) {
+    strlcpy(config.dateFormat, "TIME_ONLY", sizeof(config.dateFormat));
+    strlcpy(config.dateAlternate, "on", sizeof(config.dateAlternate));
+  }
 
   file.close();
 }
@@ -423,9 +433,11 @@ void saveClockConfiguration(const char *configFile, const clockConfigObj &config
   doc["resyncIntervalHours"] = config.resyncIntervalHours;
   doc["transitionSpeed"] = config.transitionSpeed;
   doc["dateFormat"] = config.dateFormat;
+  doc["dateAlternate"] = config.dateAlternate;
   doc["dateAlternateSeconds"] = config.dateAlternateSeconds;
   doc["customDateFormat"] = config.customDateFormat;
   doc["clockFace"] = config.clockFace;
+  doc["clockAmPm"] = config.clockAmPm;
 
   if (serializeJson(doc, file) == 0) {
     Serial.println(F("Failed to write clock config file"));
@@ -473,8 +485,18 @@ void initClockStoreConfig() {
     saveAtStart = true;
   }
 
+  if (clockConfig.dateAlternate[0] == '\0') {
+    strlcpy(clockConfig.dateAlternate, "off", sizeof(clockConfig.dateAlternate));
+    saveAtStart = true;
+  }
+
   if (clockConfig.clockFace[0] == '\0') {
     strlcpy(clockConfig.clockFace, "DEFAULT", sizeof(clockConfig.clockFace));
+    saveAtStart = true;
+  }
+
+  if (clockConfig.clockAmPm[0] == '\0') {
+    strlcpy(clockConfig.clockAmPm, "off", sizeof(clockConfig.clockAmPm));
     saveAtStart = true;
   }
 

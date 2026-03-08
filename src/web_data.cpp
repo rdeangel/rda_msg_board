@@ -109,6 +109,8 @@ void setClockPageVars() {
   clockPageVars += "<datealternateseconds>" + String(clockConfig.dateAlternateSeconds) + "</datealternateseconds>";
   clockPageVars += "<customdateformat>" + String(clockConfig.customDateFormat) + "</customdateformat>";
   clockPageVars += "<clockface>" + String(clockConfig.clockFace) + "</clockface>";
+  clockPageVars += "<datealternate>" + String(clockConfig.dateAlternate) + "</datealternate>";
+  clockPageVars += "<clockampm>" + String(clockConfig.clockAmPm) + "</clockampm>";
   clockPageVars += "<clientid>" + String(clientId) + "</clientid>";
   clockPageVars += "<version>" + String(VERSION) + "</version>";
   clockPageVars += "</clockvars>";

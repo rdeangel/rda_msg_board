@@ -204,7 +204,7 @@ extern int brightnessOverrideValue;
 
 // Clock date display variables
 extern unsigned long lastDateAlternate;
-extern bool showingDate;
+extern int clockAlternateState;  // 0=time, 1=day-of-week, 2=date
 extern char clockDateBuffer[DATE_FORMAT_SIZE];
 
 #ifndef DISABLE_TIMER_FEATURE

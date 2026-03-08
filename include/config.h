@@ -230,10 +230,12 @@ struct clockConfigObj {
   char randomizeTransition[FLAG_SIZE]; // "on" or "off"
   char transitionSpeed[REP_SIZE];     // "40" (milliseconds)
   char resyncIntervalHours[REP_SIZE]; // "6" (hours)
-  char dateFormat[TIMER_MODE_SIZE];   // "TIME_ONLY", "TIME_FULL_DATE" etc. (max 14 chars)
-  char dateAlternateSeconds[REP_SIZE]; // "5" (seconds)
+  char dateFormat[TIMER_MODE_SIZE];   // "TIME_ONLY", "TIME_SECONDS" etc. (max 14 chars)
+  char dateAlternate[FLAG_SIZE];      // "on" / "off" — rotate through date displays
+  char dateAlternateSeconds[REP_SIZE]; // "5" (seconds per step)
   char customDateFormat[STDSIZE];     // Custom strftime format string (user text, keep large)
-  char clockFace[TIMER_MODE_SIZE];    // "DEFAULT" or "MATRIX_LIGHT"
+  char clockFace[TIMER_MODE_SIZE];    // "DEFAULT", "MATRIX_LIGHT", "MATRIX_LIGHT_6"
+  char clockAmPm[FLAG_SIZE];          // "on" / "off" — 12-hour AM/PM mode
 };
 
 #ifndef DISABLE_TIMER_FEATURE

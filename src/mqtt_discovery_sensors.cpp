@@ -1237,6 +1237,10 @@ void routeHACommand(const char* topic, const char* payload) {
     handleClockResyncIntervalCommand(payload);
   } else if (entity == "clock_face") {
     handleClockFaceCommand(payload);
+  } else if (entity == "clock_date_alternate_enable") {
+    handleClockDateAlternateCommand(payload);
+  } else if (entity == "clock_ampm") {
+    handleClockAmPmCommand(payload);
   } else if (entity == "buzzer_enable") {
     handleBuzzerEnableCommand(payload);
   } else if (entity == "brightness_override_enable") {
@@ -1389,7 +1393,7 @@ void handleClockDateFormatCommand(const char* payload) {
   bool valid = false;
 
   #if MAX_DEVICES == 4
-    if (strcmp(payload, "TIME_ONLY") == 0 || strcmp(payload, "TIME_ALTERNATE") == 0) {
+    if (strcmp(payload, "TIME_ONLY") == 0 || strcmp(payload, "TIME_SECONDS") == 0) {
       valid = true;
     }
   #elif MAX_DEVICES == 8
@@ -1405,7 +1409,7 @@ void handleClockDateFormatCommand(const char* payload) {
     strlcpy(clockConfig.dateFormat, payload, sizeof(clockConfig.dateFormat));
     saveClockConfiguration(clockConfigFile, clockConfig);
 
-    showingDate = false;
+    clockAlternateState = 0;
     lastDateAlternate = millis();
 
     publishClockDateFormatState();
@@ -1532,6 +1536,25 @@ void handleClockFaceCommand(const char* payload) {
   }
 }
 
+void handleClockDateAlternateCommand(const char* payload) {
+  if (strcmp(payload, "on") == 0 || strcmp(payload, "off") == 0) {
+    strlcpy(clockConfig.dateAlternate, payload, sizeof(clockConfig.dateAlternate));
+    clockAlternateState = 0;
+    saveClockConfiguration(clockConfigFile, clockConfig);
+    if (currentDisplayMode == MODE_CLOCK) displayClock(false);
+    publishClockDateAlternateState();
+  }
+}
+
+void handleClockAmPmCommand(const char* payload) {
+  if (strcmp(payload, "on") == 0 || strcmp(payload, "off") == 0) {
+    strlcpy(clockConfig.clockAmPm, payload, sizeof(clockConfig.clockAmPm));
+    saveClockConfiguration(clockConfigFile, clockConfig);
+    if (currentDisplayMode == MODE_CLOCK) displayClock(false);
+    publishClockAmPmState();
+  }
+}
+
 // ==============================================
 // Clock State Publishers
 // ==============================================
@@ -1579,6 +1602,20 @@ void publishClockDateFormatState() {
   buildStateTopic(topic, sizeof(topic), "clock_date_format");
   mqttClient.publish(topic, clockConfig.dateFormat, true);
   PRINT("\nPublished clock_date_format state: ", clockConfig.dateFormat);
+}
+
+void publishClockDateAlternateState() {
+  if (!mqttClient.connected() || strcmp(mqttHaDiscovery, "on") != 0 || !mqttDiscoveryPublished) return;
+  char topic[256];
+  buildStateTopic(topic, sizeof(topic), "clock_date_alternate_enable");
+  mqttClient.publish(topic, clockConfig.dateAlternate, true);
+}
+
+void publishClockAmPmState() {
+  if (!mqttClient.connected() || strcmp(mqttHaDiscovery, "on") != 0 || !mqttDiscoveryPublished) return;
+  char topic[256];
+  buildStateTopic(topic, sizeof(topic), "clock_ampm");
+  mqttClient.publish(topic, clockConfig.clockAmPm, true);
 }
 
 #if MAX_DEVICES == 4
@@ -1740,6 +1777,8 @@ void publishAllClockStates() {
   publishClockRandomizeState();
   publishClockResyncIntervalState();
   publishClockFaceState();
+  publishClockDateAlternateState();
+  publishClockAmPmState();
   publishClockTimeState();
   publishClockNtpSyncedState();
   publishClockDisplayActiveState();

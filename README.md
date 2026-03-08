@@ -220,30 +220,52 @@ The script will:
 ### Project Structure
 
 ```text
-├── .github/ workflows/      # Automated build & release CI
-├── docs/                   # Detailed documentation
-│   ├── env_board_variants/ # Hardware wiring diagrams (SVG/PNG)
-│   ├── ARCHITECTURE.md     # System design & logic flow
+├── .github/workflows/           # Automated build & release CI
+├── docs/                        # Detailed documentation
+│   ├── env_board_variants/      # Hardware wiring diagrams (SVG/PNG)
+│   ├── ARCHITECTURE.md          # System design & logic flow
 │   ├── FIRMWARE_FLASHING_GUIDE.md # Flashing precompiled binaries
-│   ├── HARDWARE_REF.md     # Pinouts & wiring guides
-│   ├── HOME_ASSISTANT.md   # Discovery & entity mapping
-│   ├── HTTP_API.md         # REST endpoint documentation
-│   └── MQTT_EXAMPLES.md    # Topic patterns & payloads
-├── include/                # Header files (*.h)
-├── src/                    # Source files (*.cpp)
-│   ├── main.cpp            # Setup/Loop entry point
-│   ├── config_manager.cpp  # LittleFS JSON persistence
-│   ├── web_server.cpp      # HTTP Routing & Auth
-│   ├── web_pages_*.cpp     # Embedded HTML/CSS/JS assets
-│   ├── mqtt.cpp            # PubSubClient logic
-│   ├── mqtt_discovery_*.cpp# Grouped HA Discovery modules
-│   ├── buzzer_utils.cpp    # Chirp & alarm logic
-│   ├── weather.cpp         # OpenWeather API integration
-│   └── functions.cpp       # Core display & UTF-8 logic
-├── node_red_flow.json      # NodeRed integration example
-├── platformio.ini          # PIO environments & dependencies
-├── release.sh / .ps1       # Cross-platform release scripts
-└── images/                 # GUI & case screenshots
+│   ├── HARDWARE_REF.md          # Pinouts & wiring guides
+│   ├── HOME_ASSISTANT.md        # Discovery & entity mapping
+│   ├── HTTP_API.md              # REST endpoint documentation
+│   └── MQTT_EXAMPLES.md         # Topic patterns & payloads
+├── include/                     # Header files (*.h)
+│   ├── config.h                 # Struct definitions & compile-time constants
+│   ├── globals.h                # Shared global variable declarations
+│   ├── MatrixLight8_font.h      # Compact 8px clock bitmap font (PROGMEM)
+│   ├── MatrixLight6_font.h      # Compact 6px clock bitmap font, centred (PROGMEM)
+│   └── *.h                      # Module headers (mqtt, web, timer, weather…)
+├── src/                         # Source files (*.cpp)
+│   ├── main.cpp                 # Setup/Loop entry point
+│   ├── config_manager.cpp       # LittleFS JSON persistence
+│   ├── globals.cpp              # Global variable definitions
+│   ├── web_server.cpp           # HTTP routing & auth
+│   ├── web_pages_main.cpp       # Embedded main dashboard HTML/CSS/JS
+│   ├── web_pages_config.cpp     # Embedded config modal HTML/CSS/JS
+│   ├── web_pages_status.cpp     # Embedded system/status page HTML/CSS/JS
+│   ├── web_data.cpp             # XML/JSON response builders for AJAX
+│   ├── mqtt.cpp                 # PubSubClient connection & dispatch
+│   ├── mqtt_discovery_core.cpp  # HA Discovery — device registry & base topics
+│   ├── mqtt_discovery_sensors.cpp # HA Discovery — message, light & switch entities
+│   ├── mqtt_discovery_clock.cpp # HA Discovery — clock face & format entities
+│   ├── mqtt_discovery_timer.cpp # HA Discovery — timer/stopwatch entities
+│   ├── mqtt_discovery_sleep.cpp # HA Discovery — sleep mode entities
+│   ├── mqtt_discovery_weather.cpp # HA Discovery — weather entities
+│   ├── functions.cpp            # Core display control, clock & UTF-8 logic
+│   ├── utf8_utils.cpp           # UTF-8 → extended ASCII conversion
+│   ├── buzzer_utils.cpp         # Chirp & alert audio logic
+│   ├── chirp_library.cpp        # Named chirp sound definitions
+│   ├── timer.cpp                # Countdown timer / stopwatch logic
+│   └── weather.cpp              # OpenWeatherMap API integration
+├── tools/                       # Development utilities
+│   ├── bdf_to_parola.py         # BDF → MD_MAX72XX PROGMEM font converter
+│   └── fonts/                   # Source BDF font files
+│       ├── MatrixLight8.bdf     # 8px source — github.com/trip5/Matrix-Fonts (CC-BY)
+│       └── MatrixLight6.bdf     # 6px source — github.com/trip5/Matrix-Fonts (CC-BY)
+├── node_red_flow.json           # NodeRed integration example
+├── platformio.ini               # PIO environments & dependencies
+├── release.sh / release.ps1     # Cross-platform release scripts
+└── images/                      # GUI & case screenshots
 ```
 
 ### Libraries Used
@@ -329,9 +351,33 @@ Access the web interface at the device's IP address or mDNS hostname (e.g., `htt
 - Incoming message display toggle
 
 **Clock & Display** - Configure clock functionality:
-- Set Timezone Offset and 12/24 hour format
-- Configure Time animations and display length
+- NTP server and timezone (full POSIX TZ string support)
 - Clock brightness control
+- Transition animations (speed, effect, randomise)
+- Time Display Format and Clock Face selection (see below)
+- 12-hour AM/PM or 24-hour mode
+- Date alternation — rotates through time → day of week → date on a configurable interval
+
+#### Clock Faces
+
+Three clock faces are available, each with different capabilities:
+
+| Feature | Default | Matrix Light 8px | Matrix Light 6px |
+|---|---|---|---|
+| Time only `HH:MM` | ✓ | ✓ | ✓ |
+| Seconds `HH:MM.SS` | 8-module only | ✓ | ✓ |
+| 12-hour AM/PM | 8-module only | ✓ | ✓ |
+| Date & custom formats | 8-module only | 8-module only | 8-module only |
+| Date alternation | ✓ | ✓ | ✓ |
+| Day-of-week step | — | ✓ | ✓ |
+
+**Default** — the built-in MD_Parola proportional font. Widest characters; on 4-module builds only `HH:MM` fits.
+
+**Matrix Light 8px** — a compact 8-row bitmap font with narrow 3-pixel-wide digits. Fits `HH:MM.SS` (27 px) within a 4-module (32 px) display. Enables seconds, AM/PM, and the day-of-week alternation step. Converted from the [Matrix-Fonts](https://github.com/trip5/Matrix-Fonts) BDF source (see Acknowledgments).
+
+**Matrix Light 6px** — the same design scaled to 6 rows, vertically centred in the 8-row display. Produces a lighter, smaller appearance while retaining the same feature set as Matrix Light 8px. Also sourced from [Matrix-Fonts](https://github.com/trip5/Matrix-Fonts).
+
+> **4-module constraint:** `TIME_SECONDS` and `AM/PM` cannot be combined on 4-module builds — "12:34.56 PM" would exceed the 32-pixel display width. The interface prevents this combination automatically.
 
 **Timer Settings** - Configure countdown timer or stopwatch mode:
 - Duration and Alert sound configuration
@@ -746,6 +792,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 This project relies on the excellent open-source libraries and tools from the Arduino/ESP community. Special thanks to:
 
 - **[MajicDesigns/MD_MAX72XX](https://github.com/MajicDesigns/MD_MAX72XX)** by Marco Colli - The foundational library for controlling MAX7219 LED matrix displays. This project uses MD_MAX72XX for driving LED matrix displays and would not be possible without this excellent work.
+- **[trip5/Matrix-Fonts](https://github.com/trip5/Matrix-Fonts)** by Trip5 / Conventional Chaos (CC-BY) - Source BDF bitmap fonts used to derive the Matrix Light 8px and Matrix Light 6px clock faces. The `MatrixLight8.bdf` and `MatrixLight6.bdf` files were converted to the MD_MAX72XX PROGMEM font format using the included `tools/bdf_to_parola.py` converter with FC16-hardware bit-ordering corrections.
 - **[MD_Parola](https://github.com/MajicDesigns/MD_Parola)** by Marco Colli - Scrolling text animation effects and display management for MAX7219 matrices, built on top of MD_MAX72XX.
 - **[WiFiManager](https://github.com/tzapu/WiFiManager)** by tzapu - WiFi configuration portal that makes initial device setup painless.
 - **[ArduinoJson](https://github.com/bblanchon/ArduinoJson)** by Benoit Blanchon - Efficient JSON parsing and serialization library.

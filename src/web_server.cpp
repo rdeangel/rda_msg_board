@@ -707,10 +707,15 @@ void httpWebDirDef() {
     json += "    \"dateFormat\": "; addString(clockConfig.dateFormat); json += ",\n";
     json += "    \"brightness\": "; addString(clockConfig.brightness); json += ",\n";
     json += "    \"transitionDelayMs\": "; addString(clockConfig.transitionDelayMs); json += ",\n";
+    json += "    \"transitionSpeed\": "; addString(clockConfig.transitionSpeed); json += ",\n";
     json += "    \"transitionEffect\": "; addString(clockConfig.transitionEffect); json += ",\n";
     json += "    \"randomizeTransition\": "; addString(clockConfig.randomizeTransition); json += ",\n";
     json += "    \"resyncIntervalHours\": "; addString(clockConfig.resyncIntervalHours); json += ",\n";
-    json += "    \"clockFace\": "; addString(clockConfig.clockFace); json += "\n";
+    json += "    \"clockFace\": "; addString(clockConfig.clockFace); json += ",\n";
+    json += "    \"dateAlternate\": "; addString(clockConfig.dateAlternate); json += ",\n";
+    json += "    \"dateAlternateSeconds\": "; addString(clockConfig.dateAlternateSeconds); json += ",\n";
+    json += "    \"customDateFormat\": "; addString(clockConfig.customDateFormat); json += ",\n";
+    json += "    \"clockAmPm\": "; addString(clockConfig.clockAmPm); json += "\n";
     json += "  },\n";
 
 #ifndef DISABLE_TIMER_FEATURE
@@ -927,10 +932,15 @@ void httpWebDirDef() {
         clockBrightness = atoi(clockConfig.brightness);
       }
       if (!clock["transitionDelayMs"].isNull()) strlcpy(clockConfig.transitionDelayMs, clock["transitionDelayMs"], sizeof(clockConfig.transitionDelayMs));
+      if (!clock["transitionSpeed"].isNull()) strlcpy(clockConfig.transitionSpeed, clock["transitionSpeed"], sizeof(clockConfig.transitionSpeed));
       if (!clock["transitionEffect"].isNull()) strlcpy(clockConfig.transitionEffect, clock["transitionEffect"], sizeof(clockConfig.transitionEffect));
       if (!clock["randomizeTransition"].isNull()) strlcpy(clockConfig.randomizeTransition, clock["randomizeTransition"], sizeof(clockConfig.randomizeTransition));
       if (!clock["resyncIntervalHours"].isNull()) strlcpy(clockConfig.resyncIntervalHours, clock["resyncIntervalHours"], sizeof(clockConfig.resyncIntervalHours));
       if (!clock["clockFace"].isNull()) strlcpy(clockConfig.clockFace, clock["clockFace"], sizeof(clockConfig.clockFace));
+      if (!clock["dateAlternate"].isNull()) strlcpy(clockConfig.dateAlternate, clock["dateAlternate"], sizeof(clockConfig.dateAlternate));
+      if (!clock["dateAlternateSeconds"].isNull()) strlcpy(clockConfig.dateAlternateSeconds, clock["dateAlternateSeconds"], sizeof(clockConfig.dateAlternateSeconds));
+      if (!clock["customDateFormat"].isNull()) strlcpy(clockConfig.customDateFormat, clock["customDateFormat"], sizeof(clockConfig.customDateFormat));
+      if (!clock["clockAmPm"].isNull()) strlcpy(clockConfig.clockAmPm, clock["clockAmPm"], sizeof(clockConfig.clockAmPm));
       saveClockConfiguration(clockConfigFile, clockConfig);
 
       // Reinitialize NTP if clock enabled
@@ -1178,8 +1188,12 @@ void httpWebDirDef() {
         argValue.toCharArray(clockConfig.tzString, sizeof(clockConfig.tzString));
       } else if (argName == "DateFormat") {
         argValue.toCharArray(clockConfig.dateFormat, sizeof(clockConfig.dateFormat));
+      } else if (argName == "DateAlternate") {
+        argValue.toCharArray(clockConfig.dateAlternate, sizeof(clockConfig.dateAlternate));
       } else if (argName == "DateAlternateSeconds") {
         argValue.toCharArray(clockConfig.dateAlternateSeconds, sizeof(clockConfig.dateAlternateSeconds));
+      } else if (argName == "ClockAmPm") {
+        argValue.toCharArray(clockConfig.clockAmPm, sizeof(clockConfig.clockAmPm));
       } else if (argName == "CustomDateFormat") {
         argValue.toCharArray(clockConfig.customDateFormat, sizeof(clockConfig.customDateFormat));
       } else if (argName == "ClockFace") {
@@ -1198,11 +1212,18 @@ void httpWebDirDef() {
       }
     }
 
+    // Enforce hardware constraints before saving
+    #if MAX_DEVICES == 4
+    // TIME_SECONDS + AM/PM exceeds 32px on 4m — force 24h when seconds are shown
+    if (strcmp(clockConfig.dateFormat, "TIME_SECONDS") == 0)
+      strlcpy(clockConfig.clockAmPm, "off", sizeof(clockConfig.clockAmPm));
+    #endif
+
     // Save configuration to file
     saveClockConfiguration(clockConfigFile, clockConfig);
 
     // Reset date alternate state to ensure immediate display update
-    showingDate = false;
+    clockAlternateState = 0;
     lastDateAlternate = millis();
 
     // Always apply timezone (even if clock display is disabled)

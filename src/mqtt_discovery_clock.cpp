@@ -218,12 +218,14 @@ void publishClockDiscoveries() {
     JsonArray options = doc["options"].to<JsonArray>();
     #if MAX_DEVICES == 4
       options.add("TIME_ONLY");
-      options.add("TIME_ALTERNATE");
+      options.add("TIME_SECONDS");
     #elif MAX_DEVICES == 8
+      options.add("TIME_ONLY");
       options.add("TIME_DATE");
       options.add("FULL_DATE");
       options.add("TIME_FULL_DATE");
       options.add("CUSTOM");
+      options.add("TIME_SECONDS");
     #else
       options.add("TIME_ONLY");
     #endif
@@ -371,6 +373,54 @@ void publishClockDiscoveries() {
     serializeJson(doc, payload, sizeof(payload));
     mqttClient.publish(topic, payload, true);
     PRINT("\nPublished clock_face discovery to: ", topic);
+  }
+  delay(20);
+
+  // Date Alternate Enable switch
+  {
+    JsonDocument doc;
+    char baseTopic[128];
+    snprintf(baseTopic, sizeof(baseTopic), "%s/ha", mqttTopicDevice);
+    doc["~"] = baseTopic;
+    doc["name"] = "Alternate Date";
+    doc["uniq_id"] = String(haBaseTopic) + "_clock_date_alternate_enable";
+    doc["cmd_t"] = "~/clock_date_alternate_enable/set";
+    doc["stat_t"] = "~/clock_date_alternate_enable/state";
+    doc["payload_on"] = "on";
+    doc["payload_off"] = "off";
+    doc["icon"] = "mdi:calendar-clock";
+    doc["ent_cat"] = "config";
+    addDeviceInfo(doc);
+    addAvailability(doc);
+    char topic[256];
+    buildDiscoveryTopic(topic, sizeof(topic), "switch", "clock_date_alternate_enable");
+    char payload[512];
+    serializeJson(doc, payload, sizeof(payload));
+    mqttClient.publish(topic, payload, true);
+  }
+  delay(20);
+
+  // AM/PM mode switch
+  {
+    JsonDocument doc;
+    char baseTopic[128];
+    snprintf(baseTopic, sizeof(baseTopic), "%s/ha", mqttTopicDevice);
+    doc["~"] = baseTopic;
+    doc["name"] = "12-hour AM/PM";
+    doc["uniq_id"] = String(haBaseTopic) + "_clock_ampm";
+    doc["cmd_t"] = "~/clock_ampm/set";
+    doc["stat_t"] = "~/clock_ampm/state";
+    doc["payload_on"] = "on";
+    doc["payload_off"] = "off";
+    doc["icon"] = "mdi:hours-12";
+    doc["ent_cat"] = "config";
+    addDeviceInfo(doc);
+    addAvailability(doc);
+    char topic[256];
+    buildDiscoveryTopic(topic, sizeof(topic), "switch", "clock_ampm");
+    char payload[512];
+    serializeJson(doc, payload, sizeof(payload));
+    mqttClient.publish(topic, payload, true);
   }
   delay(20);
 }

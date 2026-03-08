@@ -35,6 +35,10 @@ input:checked ~ .slider { background-color: var(--accent); }
 input:focus ~ .slider { box-shadow: 0 0 1px var(--accent); }
 input:checked ~ .slider:before { transform: translateX(24px); }
 .slider-row { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+.seg-control { display: flex; background: #1a1a1a; border-radius: 8px; padding: 3px; gap: 2px; }
+.seg-btn { border: none; background: transparent; color: var(--subtext); padding: 6px 13px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: background 0.2s, color 0.2s; white-space: nowrap; }
+.seg-btn.active { background: var(--accent); color: #fff; }
+.seg-btn:disabled { cursor: not-allowed; }
 input[type=range] { accent-color: var(--accent); cursor: pointer; }
 
 .toast { visibility: hidden; min-width: 200px; margin-left: -100px; background-color: #333; color: #fff; text-align: center; border-radius: 6px; padding: 12px 16px; position: fixed; z-index: 20000; left: 50%; bottom: 30px; font-size: 0.9rem; }
@@ -494,7 +498,12 @@ function toggleCustomTzInput() {
   }
 }
 
-// Date Format Functions
+// Clock options helpers
+function isMatrixLight() {
+  var face = document.getElementById('CLOCKFACE').value;
+  return face === 'MATRIX_LIGHT' || face === 'MATRIX_LIGHT_6';
+}
+
 function populateDateFormatOptions() {
   var maxDevices = parseInt(document.getElementById('maxdevices_val').innerText || '4');
   var dropdown = document.getElementById('DATEFORMAT');
@@ -502,39 +511,32 @@ function populateDateFormatOptions() {
   if (maxDevices == 4) {
     dropdown.innerHTML = `
       <option value="TIME_ONLY">Time Only (HH:MM)</option>
-      <option value="TIME_ALTERNATE">Time &#8596; Date Alternating</option>
-      <option value="TIME_SECONDS">Time with Seconds (HH:MM:SS)</option>
+      <option value="TIME_SECONDS">Time with Seconds (HH:MM.SS)</option>
     `;
   } else if (maxDevices == 8) {
     dropdown.innerHTML = `
-      <option value="TIME_DATE">Time + Date (HH:MM MM/DD)</option>
+      <option value="TIME_ONLY">Time Only (HH:MM)</option>
+      <option value="TIME_DATE">Time + Date (HH:MM Mon DD)</option>
       <option value="FULL_DATE">Full Date (Day, Mon DD)</option>
       <option value="TIME_FULL_DATE">Time + Full Date</option>
       <option value="CUSTOM">Custom Format</option>
-      <option value="TIME_SECONDS">Time with Seconds (HH:MM:SS)</option>
+      <option value="TIME_SECONDS">Time with Seconds (HH:MM.SS)</option>
     `;
   } else {
     dropdown.innerHTML = '<option value="TIME_ONLY">Time Only</option>';
   }
 }
 
-function toggleDateFormatOptions() {
+function toggleClockOptions() {
   var maxDevices = parseInt(document.getElementById('maxdevices_val').innerText || '4');
-  var dateFormat = document.getElementById('DATEFORMAT').value;
-  var alternateContainer = document.getElementById('DATEALTERNATECONTAINER');
-  var customContainer = document.getElementById('CUSTOMDATEFORMATCONTAINER');
-  if (maxDevices == 4 && dateFormat === 'TIME_ALTERNATE') {
-    alternateContainer.style.display = 'block';
-  } else {
-    alternateContainer.style.display = 'none';
-  }
-  if (maxDevices == 8 && dateFormat === 'CUSTOM') {
-    customContainer.style.display = 'block';
-  } else {
-    customContainer.style.display = 'none';
-  }
-  // On 4-module builds, TIME_SECONDS requires Matrix Light font (only font that fits HH:MM.SS)
   var clockFaceSelect = document.getElementById('CLOCKFACE');
+  var dateFormatSelect = document.getElementById('DATEFORMAT');
+  var ampmToggle = document.getElementById('CLOCKAMPM');
+
+  var dateFormat = dateFormatSelect.value;
+  var ampmOn = ampmToggle.value === 'on';
+
+  // Step 1: TIME_SECONDS on 4m requires a Matrix Light font
   var defaultOption = clockFaceSelect.querySelector('option[value="DEFAULT"]');
   if (maxDevices == 4 && dateFormat === 'TIME_SECONDS') {
     if (clockFaceSelect.value === 'DEFAULT') clockFaceSelect.value = 'MATRIX_LIGHT';
@@ -542,6 +544,80 @@ function toggleDateFormatOptions() {
   } else {
     if (defaultOption) defaultOption.disabled = false;
   }
+
+  var matrixLight = isMatrixLight(); // re-read after possible face change
+
+  // Step 2: On 4m, TIME_SECONDS + AM/PM exceed the 32-pixel display budget.
+  //   Rule: TIME_SECONDS selected  → disable AM/PM (force off).
+  //         AM/PM on               → disable TIME_SECONDS option (revert if selected).
+  //         DEFAULT font on 4m     → disable both AM/PM and TIME_SECONDS.
+  var timeSecondsOption = dateFormatSelect.querySelector('option[value="TIME_SECONDS"]');
+  var ampmNote = document.getElementById('ampm_constraint_note');
+  var tsNote = document.getElementById('ts_constraint_note');
+  var ampmCard = document.getElementById('ampm_toggle_card');
+  var ampmSeg  = document.getElementById('ampm_seg');
+
+  function _setAmPmDisabled(disabled, forcedOff) {
+    if (ampmCard) ampmCard.style.opacity = disabled ? '0.4' : '1';
+    if (ampmSeg)  ampmSeg.style.pointerEvents = disabled ? 'none' : '';
+    if (disabled && forcedOff) {
+      ampmToggle.value = 'off';
+      ampmSeg && ampmSeg.querySelectorAll('.seg-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.val === 'off');
+      });
+    }
+  }
+
+  if (maxDevices == 4) {
+    if (dateFormat === 'TIME_SECONDS') {
+      // TIME_SECONDS active: disable AM/PM (HH:MM.SS AM/PM would exceed 32px)
+      _setAmPmDisabled(true, true);
+      if (timeSecondsOption) timeSecondsOption.disabled = false;
+      if (ampmNote) { ampmNote.textContent = 'Not available with seconds display on 4-module builds.'; ampmNote.style.display = 'block'; }
+      if (tsNote) tsNote.style.display = 'none';
+    } else if (!matrixLight) {
+      // DEFAULT font on 4m: disable AM/PM and TIME_SECONDS (both need Matrix Light)
+      _setAmPmDisabled(true, true);
+      if (timeSecondsOption) timeSecondsOption.disabled = true;
+      if (ampmNote) { ampmNote.textContent = 'Requires Matrix Light font.'; ampmNote.style.display = 'block'; }
+      if (tsNote) tsNote.style.display = 'none';
+    } else if (ampmOn) {
+      // AM/PM on + Matrix Light on 4m: disable TIME_SECONDS (12:34.56 PM too wide for 32px)
+      if (timeSecondsOption) timeSecondsOption.disabled = true;
+      if (dateFormat === 'TIME_SECONDS') { dateFormatSelect.value = 'TIME_ONLY'; dateFormat = 'TIME_ONLY'; }
+      _setAmPmDisabled(false, false);
+      if (ampmNote) ampmNote.style.display = 'none';
+      if (tsNote) tsNote.style.display = 'block';
+    } else {
+      // Matrix Light, no AM/PM conflict — all clear
+      _setAmPmDisabled(false, false);
+      if (timeSecondsOption) timeSecondsOption.disabled = false;
+      if (ampmNote) ampmNote.style.display = 'none';
+      if (tsNote) tsNote.style.display = 'none';
+    }
+  } else {
+    // 8m: all combinations allowed
+    _setAmPmDisabled(false, false);
+    if (timeSecondsOption) timeSecondsOption.disabled = false;
+    if (ampmNote) ampmNote.style.display = 'none';
+    if (tsNote) tsNote.style.display = 'none';
+  }
+
+  // Custom format container (8-module only)
+  var customContainer = document.getElementById('CUSTOMDATEFORMATCONTAINER');
+  customContainer.style.display = (maxDevices == 8 && dateFormatSelect.value === 'CUSTOM') ? 'block' : 'none';
+
+  // Date alternate interval — shown whenever alternate is on
+  var altOn = document.getElementById('DATEALTERNATE').checked;
+  document.getElementById('DATEALTERNATECONTAINER').style.display = altOn ? 'block' : 'none';
+}
+
+function setAmPm(val) {
+  document.getElementById('CLOCKAMPM').value = val;
+  document.querySelectorAll('#ampm_seg .seg-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.val === val);
+  });
+  toggleClockOptions();
 }
 
 function testMatrixFont() {
@@ -575,14 +651,20 @@ function openClockModal() {
         document.getElementById('TIMEZONE').value = friendlyTz;
         toggleCustomTzInput();
 
-        // Load date format settings
+        // Load time display / alternation settings
         populateDateFormatOptions();
         document.getElementById('DATEFORMAT').value = getVal('dateformat', 'TIME_ONLY');
+        document.getElementById('CLOCKFACE').value = getVal('clockface', 'DEFAULT');
+        document.getElementById('DATEALTERNATE').checked = (getVal('datealternate', 'off') === 'on');
         document.getElementById('DATEALTERNATESECONDS').value = getVal('datealternateseconds', '10');
         document.getElementById('dateAltVal').innerText = getVal('datealternateseconds', '10');
         document.getElementById('CUSTOMDATEFORMAT').value = getVal('customdateformat', '');
-        document.getElementById('CLOCKFACE').value = getVal('clockface', 'DEFAULT');
-        toggleDateFormatOptions();
+        var ampmVal = getVal('clockampm', 'off');
+        document.getElementById('CLOCKAMPM').value = ampmVal;
+        document.querySelectorAll('#ampm_seg .seg-btn').forEach(function(b) {
+          b.classList.toggle('active', b.dataset.val === ampmVal);
+        });
+        toggleClockOptions();
 
         var bri = getVal('brightness', '5');
         document.getElementById('CLOCKBRIGHTNESS').value = bri;
@@ -625,6 +707,8 @@ function saveClockConfig(event, shouldClose) {
     document.getElementById("CLOCKENABLEDHIDDEN").disabled = true;
   if(document.getElementById("RANDOMIZETRANSITION").checked)
     document.getElementById("RANDOMIZETRANSITIONHIDDEN").disabled = true;
+  if(document.getElementById("DATEALTERNATE").checked)
+    document.getElementById("DATEALTERNATEHIDDEN").disabled = true;
 
   var form = document.getElementById('clock_config_form');
   var formData = new FormData(form);
@@ -638,6 +722,7 @@ function saveClockConfig(event, shouldClose) {
   // Re-enable hidden fields immediately for next save
   document.getElementById("CLOCKENABLEDHIDDEN").disabled = false;
   document.getElementById("RANDOMIZETRANSITIONHIDDEN").disabled = false;
+  document.getElementById("DATEALTERNATEHIDDEN").disabled = false;
 
   var request = new XMLHttpRequest();
   request.onreadystatechange = function() {
@@ -1918,7 +2003,7 @@ window.onload = function() {
 
       <!-- Clock Face / Font Selection -->
       <label for="CLOCKFACE">Clock Face</label>
-      <select id="CLOCKFACE" name="ClockFace" style="width: 100%; padding: 12px; background: var(--input); border: 1px solid var(--border); color: #fff; border-radius: 6px; font-size: 1rem; margin-bottom: 5px;">
+      <select id="CLOCKFACE" name="ClockFace" onchange="toggleClockOptions()" style="width: 100%; padding: 12px; background: var(--input); border: 1px solid var(--border); color: #fff; border-radius: 6px; font-size: 1rem; margin-bottom: 5px;">
         <option value="DEFAULT">Default</option>
         <option value="MATRIX_LIGHT">Matrix Light 8px (compact, fits HH:MM:SS)</option>
         <option value="MATRIX_LIGHT_6">Matrix Light 6px (centred, smallest)</option>
@@ -1928,13 +2013,36 @@ window.onload = function() {
       </p>
       <button type="button" onclick="testMatrixFont()" style="padding: 6px 14px; background: var(--input); border: 1px solid var(--border); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.85rem; margin-bottom: 15px;">Preview Clock Face Font</button>
 
-      <!-- Date Format Dropdown (module-aware) -->
-      <label for="DATEFORMAT">Date Display Format</label>
-      <select id="DATEFORMAT" name="DateFormat" onchange="toggleDateFormatOptions()" style="width: 100%; padding: 12px; background: var(--input); border: 1px solid var(--border); color: #fff; border-radius: 6px; font-size: 1rem; margin-bottom: 15px;">
+      <!-- Time Display Format Dropdown (module-aware) -->
+      <label for="DATEFORMAT">Time Display Format</label>
+      <select id="DATEFORMAT" name="DateFormat" onchange="toggleClockOptions()" style="width: 100%; padding: 12px; background: var(--input); border: 1px solid var(--border); color: #fff; border-radius: 6px; font-size: 1rem; margin-bottom: 5px;">
         <!-- Options populated by JavaScript based on maxdevices -->
       </select>
+      <p id="ts_constraint_note" style="display:none; font-size: 0.85rem; color: #f0a040; margin: 0 0 12px 0;">Not available with AM/PM on 4-module builds (exceeds display width).</p>
+      <div style="margin-bottom: 10px;"></div>
 
-      <!-- Date Alternate Interval (4-module only) -->
+      <!-- AM/PM mode — segmented pill -->
+      <div class="toggle-card" id="ampm_toggle_card">
+        <span class="label-text">Time Format</span>
+        <div class="seg-control" id="ampm_seg">
+          <button type="button" class="seg-btn active" data-val="off" onclick="setAmPm('off')">24h</button>
+          <button type="button" class="seg-btn" data-val="on" onclick="setAmPm('on')">12h AM/PM</button>
+        </div>
+        <input type="hidden" id="CLOCKAMPM" name="ClockAmPm" value="off">
+      </div>
+      <p id="ampm_constraint_note" style="display:none; font-size: 0.85rem; color: #f0a040; margin: -8px 0 12px 0;"></p>
+
+      <!-- Date Alternation toggle — standard switch -->
+      <div class="toggle-card">
+        <span class="label-text">Alternate Date Display</span>
+        <label class="switch">
+          <input type="checkbox" id="DATEALTERNATE" name="DateAlternate" value="on" onchange="toggleClockOptions()">
+          <span class="slider round"></span>
+        </label>
+        <input type="hidden" id="DATEALTERNATEHIDDEN" name="DateAlternate" value="off">
+      </div>
+
+      <!-- Alternate Interval (shown when dateAlternate=on) -->
       <div id="DATEALTERNATECONTAINER" style="display: none;">
         <label for="DATEALTERNATESECONDS">Alternate Interval: <span id="dateAltVal" class="val-label">10</span>s</label>
         <div class="slider-row">
@@ -1943,7 +2051,7 @@ window.onload = function() {
           <span class="val-label" id="dateAltVal" style="min-width: 40px; text-align: right;">10</span>
         </div>
         <p style="font-size: 0.85rem; color: var(--subtext); margin: -5px 0 15px 0;">
-          How often to alternate between time and date display
+          Rotates: time &rarr; day of week (Matrix Light only) &rarr; date &rarr; repeat
         </p>
       </div>
 
