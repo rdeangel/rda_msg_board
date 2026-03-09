@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- releases -->
 
+## [v1.3.1] - 2026-03-09
+
+### 🐛 Bug Fixes
+- fix(utf8): add mappings for smart quotes, dashes, and ellipsis - [ef148a9](https://github.com/rdeangel/rda_msg_board/commit/ef148a9)
+
 ## [v1.3.0] - 2026-03-08
 
 ### ✨ New Features
