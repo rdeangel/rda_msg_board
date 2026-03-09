@@ -29,9 +29,17 @@ uint8_t utf8Ascii(uint8_t ascii){
     case 0xC2: c = ascii;  break;
     case 0xC3: c = ascii | 0xC0;  break;
     case 0x82: if (ascii==0xAC) c = 0x80; // Euro symbol special case
-    case 0xE2: 
+    case 0xE2:
+      break;  // 3-byte sequence: wait for third byte (cPrev will be set to ascii below)
+    case 0x80:  // Third byte of E2 80 xx sequences (smart quotes, dashes, ellipsis)
       switch (ascii) {
-      case 0x80: c = 133;  break;// ellipsis special case
+      case 0x98: c = '\''; break;  // U+2018 LEFT SINGLE QUOTATION MARK  → '
+      case 0x99: c = '\''; break;  // U+2019 RIGHT SINGLE QUOTATION MARK → '
+      case 0x9C: c = '"';  break;  // U+201C LEFT DOUBLE QUOTATION MARK  → "
+      case 0x9D: c = '"';  break;  // U+201D RIGHT DOUBLE QUOTATION MARK → "
+      case 0x93: c = '-';  break;  // U+2013 EN DASH  → -
+      case 0x94: c = '-';  break;  // U+2014 EM DASH  → -
+      case 0xA6: c = 133;  break;  // U+2026 HORIZONTAL ELLIPSIS
       }
       break;
     }

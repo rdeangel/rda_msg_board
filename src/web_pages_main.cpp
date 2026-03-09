@@ -121,7 +121,7 @@ function clearMessage() {
 
 function clearDisplay() {
   var request = new XMLHttpRequest();
-  var params = 'MSG=&REP=1&BUZ=0&DEL=35&BRI=7&ASC=0&ALERTCHIRP=Silent';
+  var params = 'MSG=&REP=1&BUZ=0&DEL=35&BRI=7&ASC=1&ALERTCHIRP=Silent';
   request.open('GET', 'arg?' + params, true);
   request.onreadystatechange = function() {
     if (this.readyState == 4 && (this.status == 200 || this.status == 204)) {
@@ -194,7 +194,7 @@ function SendText() {
                '&DEL=' + document.getElementById('DEL').value +
                '&BRI=' + document.getElementById('BRI').value +
                '&ALERTCHIRP=' + encodeURIComponent(document.getElementById('ALERTCHIRP').value) +
-               '&ASC=0';
+               '&ASC=1';
 
   request.open('GET', 'arg?' + params, true);
   
