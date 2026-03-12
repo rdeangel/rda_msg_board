@@ -298,6 +298,11 @@ void httpWebDirDef() {
       return;
     }
     #endif
+    if (forceRepetitions && newMessageAvailable && strlen(curMessage) > 0 && repeatCount < atoi(newRepeat)) {
+      PRINTS("Message blocked: Forced repetition in progress\n");
+      serverHttp.send(409, "text/plain", "Forced repetition in progress");
+      return;
+    }
     onMessageCallHttp();
   });
   serverHttp.on("/api", HTTP_POST, []() {
@@ -312,6 +317,11 @@ void httpWebDirDef() {
       return;
     }
     #endif
+    if (forceRepetitions && newMessageAvailable && strlen(curMessage) > 0 && repeatCount < atoi(newRepeat)) {
+      PRINTS("Message blocked: Forced repetition in progress\n");
+      serverHttp.send(409, "application/json", "{\"error\":\"Forced repetition in progress\"}");
+      return;
+    }
     PRINTS("\nHTTP JSON Message Arrived!\nHTTP Message: ");
     onMessageCallJson(serverHttp.arg("plain").c_str());
     serverHttp.send(204, "");

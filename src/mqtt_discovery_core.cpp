@@ -129,6 +129,10 @@ void initializeHAParameters() {
   haLastAsciiConv = atoi(asciiConvDefault);
   PRINT("HA ASCII Conv: ", haLastAsciiConv);
 
+  // Initialize force repetitions (default off)
+  haLastForceRep = false;
+  PRINTS("HA Force Rep: false");
+
   haParametersInitialized = true;
   PRINTS("=== HA Parameters Initialized ===\n");
 }

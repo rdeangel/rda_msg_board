@@ -46,6 +46,7 @@ void onMessageCallHttp(void) {
   // Removed debug String building to prevent blocking - was causing crashes
   // when called during clock display transitions
   bool messageArg = false;
+  bool forceRepArg = false;
   for (uint8_t i = 0; i < serverHttp.args(); i++) {
     if (serverHttp.argName(i) == "MSG") {
       repeatCount = 0;
@@ -78,6 +79,15 @@ void onMessageCallHttp(void) {
       serverHttp.arg(i).toCharArray(newAlertChirp, STDSIZE);
       newAlertChirpAvailable = true;
     }
+    if (serverHttp.argName(i) == "FORCEREP") {
+      String val = serverHttp.arg(i);
+      val.toLowerCase();
+      forceRepetitions = (val == "true" || val == "1" || val == "on");
+      forceRepArg = true;
+    }
+  }
+  if (!forceRepArg) {
+    forceRepetitions = false;
   }
   if (!messageArg) {
     strcpy(newMessage, "");
@@ -194,6 +204,14 @@ void onMessageCallJson(String jsonMsgData){
   } else {
     strcpy(newAlertChirp, alertChirpDefault);
     newAlertChirpAvailable = true;
+  }
+
+  if (!doc["FORCEREP"].isNull()) {
+    String forceRepVal = doc["FORCEREP"].as<String>();
+    forceRepVal.toLowerCase();
+    forceRepetitions = (forceRepVal == "true" || forceRepVal == "1" || forceRepVal == "on");
+  } else {
+    forceRepetitions = false;
   }
 }
 

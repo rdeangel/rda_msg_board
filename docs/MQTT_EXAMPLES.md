@@ -57,6 +57,7 @@ mpub -t "${DEVICE_TOPIC_BASE}/json" -m '{"MSG":"JSON Test"}'
 - `DEL`: Scroll Delay (ms, lower=faster)
 - `BRI`: Brightness (0-15)
 - `ASC`: ASCII Conversion (1=on, 0=off)
+- `FORCEREP`: Force Repetitions — block new messages until done (`true`/`false`, default `false`)
 
 ```bash
 mpub -t "${DEVICE_TOPIC_BASE}/json" -m '{
@@ -68,6 +69,17 @@ mpub -t "${DEVICE_TOPIC_BASE}/json" -m '{
   "ASC": 1
 }'
 ```
+
+**4b. Force Repetitions — priority message that cannot be interrupted:**
+```bash
+mpub -t "${DEVICE_TOPIC_BASE}/json" -m '{
+  "MSG": "Priority alert - do not interrupt!",
+  "REP": 5,
+  "BUZ": 3,
+  "FORCEREP": true
+}'
+```
+*Any MQTT or HTTP message received while this is displaying is silently dropped and logged to serial. The lock releases automatically when all repetitions complete.*
 
 **5. Infinite Scroll:**
 ```bash
@@ -254,6 +266,17 @@ mpub -t "${DEVICE_TOPIC_BASE}/ha/mqtt_messages/set" -m "ON"
 # Disable
 mpub -t "${DEVICE_TOPIC_BASE}/ha/mqtt_messages/set" -m "OFF"
 ```
+
+**26b. Force Repetitions Switch:**
+*Stages the FORCEREP flag in HA RAM. Applied when the Send button/command is triggered.*
+```bash
+# Enable — next HA Send will lock the display until all repeats finish
+mpub -t "${DEVICE_TOPIC_BASE}/ha/force_rep/set" -m "ON"
+
+# Disable (default)
+mpub -t "${DEVICE_TOPIC_BASE}/ha/force_rep/set" -m "OFF"
+```
+*Note: This only affects messages sent via the HA "Send" command (`ha/send/command`). Messages sent directly via JSON topics carry their own `FORCEREP` flag and are not affected by this switch.*
 
 **27. Global Brightness Override:**
 ```bash

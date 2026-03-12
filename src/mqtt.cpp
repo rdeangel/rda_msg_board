@@ -21,6 +21,7 @@ void plainMsgFunct(String plainMsgString) {
   newAsciiConvAvailable = true;
   strcpy(newAlertChirp, alertChirpDefault);
   newAlertChirpAvailable = true;
+  forceRepetitions = false;
 }
 
 //function called when an MQTT message is received
@@ -41,6 +42,12 @@ void mqttCallBack(const char *topic, byte *payload, unsigned int length) {
   // Check if MQTT message display is disabled
   if (strcmp(mqttMessagesEnable, "on") != 0) {
     PRINTS("\nMQTT Messages display is disabled - ignoring message");
+    return;
+  }
+
+  // Check if a forced repetition is in progress
+  if (forceRepetitions && newMessageAvailable && strlen(curMessage) > 0 && repeatCount < atoi(newRepeat)) {
+    PRINTS("\nMessage dropped: Forced repetition in progress");
     return;
   }
 

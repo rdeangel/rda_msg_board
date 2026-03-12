@@ -71,6 +71,14 @@ curl --user admin:msgboard -X GET -G "http://${DEVICE_IP}/arg" \
 curl --user admin:msgboard -X GET "http://${DEVICE_IP}/arg"
 ```
 
+**8b. Force Repetitions — block new messages until done:**
+```bash
+curl --user admin:msgboard -X GET -G "http://${DEVICE_IP}/arg" \
+  --data-urlencode "MSG=Priority alert - do not interrupt!" \
+  --data-urlencode "REP=5" \
+  --data-urlencode "FORCEREP=true"
+```
+
 **9. UTF-8 Special Characters:**
 ```bash
 curl --user admin:msgboard -X GET -G "http://${DEVICE_IP}/arg" \
@@ -119,6 +127,18 @@ curl --user admin:msgboard -X POST "http://${DEVICE_IP}/api" \
     "BRI": 12,
     "ASC": 1,
     "ALERTCHIRP": "Gentle Dawn"
+  }'
+```
+
+**14b. Force Repetitions via JSON:**
+```bash
+curl --user admin:msgboard -X POST "http://${DEVICE_IP}/api" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "MSG": "Priority alert - do not interrupt!",
+    "REP": 5,
+    "BUZ": 3,
+    "FORCEREP": true
   }'
 ```
 
@@ -585,16 +605,111 @@ sleep 2
 echo "Done!"
 ```
 
+## Force Repetitions (`FORCEREP`)
+
+`FORCEREP` is a per-message flag that locks the display for the full repeat cycle of the current message, causing any new incoming message to be rejected with `409 Conflict` until all repetitions have completed.
+
+**Default:** `false` — omitting the parameter never blocks.
+
+**Accepted values:** `true`, `1`, `on` (case-insensitive). Anything else is treated as `false`.
+
+### How it works
+
+When `FORCEREP=true` is included with a message:
+
+1. The message displays normally and runs through all `REP` repetitions.
+2. Any new message received via HTTP GET, HTTP POST, or MQTT JSON **while the repetitions are still in progress** is rejected.
+3. Once all repetitions complete and `curMessage` is cleared, the lock is released automatically — the next message will be accepted normally.
+
+The lock is entirely runtime state. It resets to `false` on device reboot, and any message sent **without** `FORCEREP=true` clears the flag for the next sender.
+
+### HTTP response codes
+
+| Code | Meaning |
+|------|---------|
+| `204 No Content` | Message accepted and queued |
+| `403 Forbidden` | Rejected — sleep mode is active |
+| `409 Conflict` | Rejected — forced repetition in progress |
+| `401 Unauthorized` | Bad credentials |
+
+### Detecting board availability from a sender
+
+Use the `409` response to know the board is busy and retry later:
+
+```bash
+#!/bin/bash
+DEVICE_IP="192.168.1.100"
+MAX_RETRIES=10
+RETRY_DELAY=5
+
+for i in $(seq 1 $MAX_RETRIES); do
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+    --user admin:msgboard -X POST "http://${DEVICE_IP}/api" \
+    -H "Content-Type: application/json" \
+    -d '{"MSG":"New alert","REP":3}')
+
+  if [ "$HTTP_CODE" = "204" ]; then
+    echo "Message accepted."
+    break
+  elif [ "$HTTP_CODE" = "409" ]; then
+    echo "Attempt $i: Board busy (forced repetition). Retrying in ${RETRY_DELAY}s..."
+    sleep $RETRY_DELAY
+  elif [ "$HTTP_CODE" = "403" ]; then
+    echo "Board in sleep mode. Aborting."
+    break
+  else
+    echo "Unexpected response: $HTTP_CODE"
+    break
+  fi
+done
+```
+
+### Use cases
+
+- **Critical alerts** — fire alarm, security event, or urgent notification that must not be overridden mid-display.
+- **Queuing systems** — a sender can detect `409` and back off rather than silently dropping its message.
+- **Kiosk / public display** — ensure a sponsored or scheduled message runs its full cycle before the next one takes over.
+
+### Interaction with other blocking features
+
+| Condition | Response | Priority |
+|-----------|----------|----------|
+| Sleep mode active | `403` | Checked first |
+| Forced repetition in progress | `409` | Checked second |
+| Normal operation | `204` | Message accepted |
+
+Sleep mode is evaluated before the force-rep guard, so a sleep-mode block always wins regardless of `FORCEREP`.
+
+---
+
 ## Expected Responses
 
-**Success (200 OK):**
-```json
-{"status":"ok"}
+**Success (204 No Content):**
+```
+(empty body)
 ```
 
 **Authentication Error (401):**
 ```text
 HTTP Basic: Access denied.
+```
+
+**Sleep Mode Active (403):**
+```text
+Sleep mode active
+```
+or (JSON endpoint):
+```json
+{"error":"Sleep mode active"}
+```
+
+**Forced Repetition In Progress (409):**
+```text
+Forced repetition in progress
+```
+or (JSON endpoint):
+```json
+{"error":"Forced repetition in progress"}
 ```
 
 **Validation Error (400):**

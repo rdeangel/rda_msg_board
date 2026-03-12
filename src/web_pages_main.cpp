@@ -41,7 +41,7 @@ button:hover, input[type=submit]:hover { opacity: 0.9; }
 .info span { color: #888; }
 .val-label { color: var(--accent); min-width: 28px; text-align: right; font-weight: 500; }
 /* Input wrapper for clear button */
-.message-row { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; }
+.message-row { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; padding-bottom: 3px; }
 .input-wrapper { position: relative; flex: 1; }
 .input-wrapper input { padding-right: 36px; }
 .clear-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #888; cursor: pointer; font-size: 1.1rem; padding: 4px 8px; margin: 0; width: auto; line-height: 1; }
@@ -58,7 +58,7 @@ button:hover, input[type=submit]:hover { opacity: 0.9; }
 .reset-btn { background: transparent; border: 1px solid var(--border); color: #888; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; margin-top: 15px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; }
 .reset-btn:hover { background: #333; color: #fff; border-color: #555; }
 .reset-btn:active { transform: scale(0.98); }
-#txt_form { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+#txt_form { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: visible; }
 /* Modal */
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
 .modal-overlay.show { display: flex; }
@@ -81,6 +81,8 @@ button:hover, input[type=submit]:hover { opacity: 0.9; }
 /* Shake Animation */
 @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
 .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; border-color: #da3633 !important; }
+/* Toggle Switch */
+.btn-pushed { background: var(--accent) !important; border-color: var(--accent) !important; box-shadow: inset 0 2px 5px rgba(0,0,0,0.45) !important; transform: scale(0.93) !important; }
 </style>
 <script>
 function showToast(msg, type) {
@@ -102,9 +104,16 @@ function saveToLocalStorage() {
     BUZ: document.getElementById('BUZ').value,
     DEL: document.getElementById('DEL').value,
     BRI: document.getElementById('BRI').value,
-    ALERTCHIRP: document.getElementById('ALERTCHIRP').value
+    ALERTCHIRP: document.getElementById('ALERTCHIRP').value,
+    FORCEREP: document.getElementById('FORCEREP_BTN').classList.contains('btn-pushed')
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function toggleForceRep() {
+  var btn = document.getElementById('FORCEREP_BTN');
+  btn.classList.toggle('btn-pushed');
+  saveToLocalStorage();
 }
 
 function loadFromLocalStorage() {
@@ -170,6 +179,8 @@ function confirmResetDefaults() {
         document.getElementById('ALERTCHIRP').value = defaults.ALERTCHIRP;
         updateBuzzerSliderMax();
       }
+      // Reset FORCEREP button to default (unpressed)
+      document.getElementById('FORCEREP_BTN').classList.remove('btn-pushed');
       // Clear localStorage
       localStorage.removeItem(STORAGE_KEY);
       showToast('Reset to defaults!', 'success');
@@ -194,16 +205,19 @@ function SendText() {
                '&DEL=' + document.getElementById('DEL').value +
                '&BRI=' + document.getElementById('BRI').value +
                '&ALERTCHIRP=' + encodeURIComponent(document.getElementById('ALERTCHIRP').value) +
-               '&ASC=1';
+               '&ASC=1' +
+               '&FORCEREP=' + (document.getElementById('FORCEREP_BTN').classList.contains('btn-pushed') ? 'true' : 'false');
 
   request.open('GET', 'arg?' + params, true);
-  
+
   request.onreadystatechange = function() {
     if (this.readyState == 4) {
       if (this.status == 200 || this.status == 204) {
         showToast('Message Sent!', 'success');
       } else if (this.status == 403) {
         showToast('Blocked: Sleep mode is active', 'error');
+      } else if (this.status == 409) {
+        showToast('Blocked: Forced repetition in progress', 'error');
       } else {
         showToast('Error: ' + this.status, 'error');
       }
@@ -265,6 +279,11 @@ function getData() {
       // Load message from localStorage if available
       if (saved && saved.MSG) {
         document.getElementById('MSG').value = saved.MSG;
+      }
+
+      // Load FORCEREP from localStorage if available
+      if (saved && saved.FORCEREP) {
+        document.getElementById('FORCEREP_BTN').classList.add('btn-pushed');
       }
 
       // Set up input handlers with localStorage saving
@@ -351,6 +370,9 @@ window.onload = getData;
       <button type="button" class="icon-btn btn-secondary" onclick="clearDisplay()" title="Clear Display">
         <svg viewBox="0 0 24 24"><path d="M19.36 2.72l1.42 1.42-5.72 5.71c1.07 1.54 1.22 3.39.32 4.59L9.06 8.12c1.2-.9 3.05-.75 4.59.32l5.71-5.72zM5.93 17.57c-2.01-2.01-3.24-4.41-3.58-6.65l4.89-2.09 7.44 7.44-2.09 4.89c-2.24-.34-4.64-1.57-6.66-3.59z"/></svg>
       </button>
+      <button type="button" id="FORCEREP_BTN" class="icon-btn btn-secondary" onclick="toggleForceRep()" title="Force repetitions - lock display until all repeats finish">
+        <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+      </button>
       <button type="submit" class="icon-btn btn-primary" title="Send Message">
          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
       </button>
@@ -371,7 +393,7 @@ window.onload = getData;
           <span id="DEL_LABEL" class="val-label">0</span>
           <button type="button" class="default-btn" onclick="setDefault('DEL')" title="Set as default">&#128204;</button>
         </div>
-        
+
         <label>Brightness</label>
         <div class="slider-row">
           <input type="range" id="BRI" min="0" max="15">

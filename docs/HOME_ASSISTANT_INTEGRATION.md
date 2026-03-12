@@ -39,6 +39,7 @@ These entities allow you to control the device settings directly from Home Assis
 | **Message Sound** | Select | `select` | Choose musical chirp pattern for alert. |
 | **ASCII Conversion** | Switch | `switch` | Toggle extended ASCII character conversion (ON/OFF). |
 | **MQTT Messages** | Switch | `switch` | Toggle display of incoming MQTT messages (ON/OFF). Preservation of connection. |
+| **Force Repetitions** | Switch | `switch` | When ON, the next HA Send locks the display for the full repeat cycle — any new messages are rejected with `409` until all repetitions complete (ON/OFF). |
 | **Buzzer Enable** | Switch | `switch` | Global master toggle for all audible alerts (ON/OFF). |
 | **Bright. Override Enable**| Switch | `switch` | Global display brightness override toggle (ON/OFF). |
 | **Bright. Override Value**| Number | `number` | Global brightness override level (0-15). |

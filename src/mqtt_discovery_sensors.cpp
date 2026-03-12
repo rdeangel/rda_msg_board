@@ -206,6 +206,29 @@ void publishSwitchDiscoveries() {
   serializeJson(doc2, payload, sizeof(payload));
   mqttClient.publish(topic, payload, true);
   PRINT("\nPublished MQTT Messages switch discovery to: ", topic);
+
+  // Force Repetitions Switch
+  JsonDocument doc3;
+  doc3["~"] = baseTopic;
+
+  doc3["name"] = "Force Repetitions";
+  doc3["uniq_id"] = String(haBaseTopic) + "_force_rep";
+  doc3["cmd_t"] = "~/force_rep/set";
+  doc3["stat_t"] = "~/force_rep/state";
+  doc3["payload_on"] = "ON";
+  doc3["payload_off"] = "OFF";
+  doc3["state_on"] = "ON";
+  doc3["state_off"] = "OFF";
+  doc3["icon"] = "mdi:repeat-variant";
+
+  addDeviceInfo(doc3);
+  addAvailability(doc3);
+
+  buildDiscoveryTopic(topic, sizeof(topic), "switch", "force_rep");
+
+  serializeJson(doc3, payload, sizeof(payload));
+  mqttClient.publish(topic, payload, true);
+  PRINT("\nPublished Force Repetitions switch discovery to: ", topic);
 }
 
 void publishSensorDiscoveries() {
@@ -802,6 +825,19 @@ void publishMqttMessagesState() {
   PRINTS("\nPublished MQTT Messages state");
 }
 
+void publishForceRepState() {
+  if (!mqttClient.connected() || strcmp(mqttHaDiscovery, "on") != 0 || !mqttDiscoveryPublished) {
+    return;
+  }
+
+  char topic[256];
+  buildStateTopic(topic, sizeof(topic), "force_rep");
+
+  const char* state = haLastForceRep ? "ON" : "OFF";
+  mqttClient.publish(topic, state, true);
+  PRINT("\nPublished force_rep state: ", state);
+}
+
 void publishSensorStates() {
   if (!mqttClient.connected() || strcmp(mqttHaDiscovery, "on") != 0 || !mqttDiscoveryPublished) {
     return;
@@ -873,6 +909,8 @@ void publishAllStates() {
   // Switches
   publishAsciiConvState();
   publishMqttMessagesState();
+  delay(20);
+  publishForceRepState();
   delay(20);
   publishRepeatCountdownState();
   delay(20);
@@ -990,6 +1028,14 @@ void handleAsciiConvCommand(const char* payload) {
   publishAsciiConvState();
 }
 
+void handleForceRepCommand(const char* payload) {
+  PRINT("\nHandling force_rep command: ", payload);
+
+  haLastForceRep = (strcmp(payload, "ON") == 0);
+  PRINT("Stored force rep in HA RAM: ", haLastForceRep);
+  publishForceRepState();
+}
+
 void handleMqttMessagesCommand(const char* payload) {
   if (strcmp(payload, "ON") == 0) {
     strcpy(newMqttMessagesEnable, "on");
@@ -1095,6 +1141,9 @@ void handleSendCommand(const char* payload) {
       PRINT("ASCII Conv: ", haLastAsciiConv);
     }
 
+    forceRepetitions = haLastForceRep;
+    PRINT("Force Repetitions: ", forceRepetitions);
+
     repeatCount = 0;
     PRINTS("=== Message Queued for Display ===");
 
@@ -1167,6 +1216,8 @@ void routeHACommand(const char* topic, const char* payload) {
     handleAsciiConvCommand(payload);
   } else if (strstr(topic, "/mqtt_messages/set")) {
     handleMqttMessagesCommand(payload);
+  } else if (strstr(topic, "/force_rep/set")) {
+    handleForceRepCommand(payload);
   } else if (strstr(topic, "/reboot/command")) {
     handleRebootCommand(payload);
   } else if (entity == "clear") {

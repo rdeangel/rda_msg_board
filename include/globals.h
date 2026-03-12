@@ -96,6 +96,7 @@ extern int haLastBuzzer;
 extern int haLastScrollDelay;
 extern int haLastBrightness;
 extern int haLastAsciiConv;
+extern bool haLastForceRep;
 extern bool haParametersInitialized;
 
 // Message Arrays
@@ -164,6 +165,9 @@ extern char asciiConvDefault[ASC_SIZE];
 extern char newAlertChirp[STDSIZE];
 extern char alertChirpDefault[STDSIZE];
 extern bool newAlertChirpAvailable;
+
+// Force Repetitions Flag
+extern bool forceRepetitions;
 
 // State Flags
 extern bool firstMessage;

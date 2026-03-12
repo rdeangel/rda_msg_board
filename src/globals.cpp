@@ -87,6 +87,7 @@ int haLastBuzzer = -1;
 int haLastScrollDelay = -1;
 int haLastBrightness = -1;
 int haLastAsciiConv = -1;
+bool haLastForceRep = false;
 bool haParametersInitialized = false;
 
 const char *mqttConfigFile = "/mqtt.config";
@@ -169,6 +170,8 @@ bool newAlertChirpAvailable = false;
 // Buzzer Global Control
 char newBuzzerEnable[STDSIZE] = "";
 bool newBuzzerEnableAvailable = false;
+
+bool forceRepetitions = false;
 
 bool firstMessage = true;
 bool firstMessageOff = false;
