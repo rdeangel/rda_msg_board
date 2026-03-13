@@ -311,10 +311,33 @@ struct weatherConfigObj {
   char location[WEATHER_LOCATION_SIZE]; // City name or description (user text, keep large)
   char latitude[WEATHER_COORD_SIZE];  // Decimal latitude (e.g., "40.7128")
   char longitude[WEATHER_COORD_SIZE]; // Decimal longitude (e.g., "-74.0060")
-  char updateIntervalMinutes[REP_SIZE]; // How often to fetch weather (e.g., "30")
+  char updateIntervalMinutes[REP_SIZE];  // How often to fetch from API (e.g., "30")
+  char displayIntervalMinutes[REP_SIZE]; // How often to display on LED while in clock mode (e.g., "5")
   char temperatureUnit[FLAG_SIZE];    // "C" for Celsius, "F" for Fahrenheit
   char brightness[BRI_SIZE];          // "0" to "15"
-  char displayDurationSeconds[REP_SIZE]; // How long to show weather before returning to clock
+  char displayRepeatCount[REP_SIZE];  // How many times to scroll before returning to clock (1–5)
+};
+#endif
+
+#ifndef DISABLE_CRYPTO_FEATURE
+// Crypto Price Ticker Configuration
+// CoinPaprika API — free, optional API key for registered accounts
+// Coin IDs reference: https://coinpaprika.com/coins/
+#define CRYPTO_API_KEY_SIZE 64   // Optional CoinPaprika API key (registered free account)
+#define CRYPTO_COINS_SIZE 256    // Comma-separated CoinPaprika coin IDs (max MAX_CRYPTO_COINS)
+#define CRYPTO_CURRENCY_SIZE 8   // e.g. "USD", "EUR", "GBP", "JPY", "BTC", "ETH"
+#define CRYPTO_PRICE_BUF_SIZE 512 // Full formatted scrolling price string
+#define MAX_CRYPTO_COINS 10       // Maximum number of coins to track
+
+struct cryptoConfigObj {
+  char enabled[FLAG_SIZE];                   // "on" or "off"
+  char apiKey[CRYPTO_API_KEY_SIZE];          // Optional CoinPaprika API key (leave empty for unauthenticated)
+  char coins[CRYPTO_COINS_SIZE];             // Comma-separated CoinPaprika IDs (max 10)
+  char currency[CRYPTO_CURRENCY_SIZE];       // "USD", "EUR", "GBP", "JPY", "BTC", "ETH"
+  char updateIntervalMinutes[REP_SIZE];      // How often to fetch from API: "15", "30", "60", "180"
+  char displayIntervalMinutes[REP_SIZE];     // How often to display on LED while in clock mode (e.g., "5")
+  char displayRepeatCount[REP_SIZE];         // How many times to scroll before returning to clock (1–5)
+  char brightness[BRI_SIZE];                 // "0" to "15"
 };
 #endif
 
@@ -338,6 +361,11 @@ enum DisplayMode {
   ,
   MODE_WEATHER,     // Displaying weather
   MODE_WEATHER_EXIT // Animating weather exit
+#endif
+#ifndef DISABLE_CRYPTO_FEATURE
+  ,
+  MODE_CRYPTO,      // Displaying crypto price ticker
+  MODE_CRYPTO_EXIT  // Animating crypto exit
 #endif
 };
 

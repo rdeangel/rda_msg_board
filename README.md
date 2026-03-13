@@ -7,6 +7,7 @@
 A WiFi-enabled LED matrix message board system for ESP8266 and ESP32 microcontrollers that displays scrolling messages from remote systems or users via HTTP, MQTT, or a built-in web interface. Designed for home automation integration with Home Assistant, NodeRed, Linux/Windows systems, and direct browser access.
 
 ## What's New
+- **Crypto Price Ticker (ESP32):** Live cryptocurrency prices from CoinPaprika (free, no API key) scrolling on the display between clock updates. Up to 10 coins, 6 currencies, configurable fetch and display intervals.
 - **Complete Refactor:** Migrated to PlatformIO for better dependency management and improved development workflow.
 - **Modernized UI:** Redesigned responsive web interface with AJAX updates and in-page modal confirmations.
 - **Configuration Management:** Export/Import full JSON config backups and set persistent custom message defaults via the web interface.
@@ -49,6 +50,7 @@ Originally developed for Aduino IDE at [esp8266_max7219_rda_msg_board](https://g
 - **Chirp Library** - Pre-defined musical alerts (fansfare, alarms, chimes, For Elise, Mario Bros) for timer events
 - **Real-time Updates** - Messages display immediately across all input methods
 - **Timer & Stopwatch** - Count down or count up with buzzer alerts and auto-repeat
+- **Crypto Price Ticker** *(ESP32 only)* - Live prices for up to 10 coins via [CoinPaprika](https://coinpaprika.com/) (free, no API key). Supports USD, EUR, GBP, JPY, BTC, ETH. Independent fetch and display intervals.
 
 ### Configuration & Management
 - **WiFi Configuration Portal** - Easy setup via captive portal on first boot or after reset
@@ -133,14 +135,13 @@ In `platformio.ini`, you can uncomment any of the following definitions under yo
     ; --- Modular Features ---
     ; -DDISABLE_SLEEP_MODE_FEATURE
     ; -DDISABLE_TIMER_FEATURE
-    -DDISABLE_WEATHER_FEATURE
+    -DDISABLE_WEATHER_FEATURE    ; default ON for ESP8266 (heap constraint)
+    -DDISABLE_CRYPTO_FEATURE     ; default ON for ESP8266 (heap constraint)
     ; -DDISABLE_ALARM_FEATURE
 ```
 
 > [!NOTE]
-```markdown
-> **Important Note for ESP8266 Users:** Enabling the Weather feature on ESP8266 will make WiFi setup (Captive Portal) unreliable; you will likely not be able to scan for or enter the WiFi SSID. For this reason, it is disabled by default (`-DDISABLE_WEATHER_FEATURE`). You can upload firmware with Weather enabled *after* WiFi is configured and it will work fine, but if you need to reset the device, you may need to flash a version without the Weather feature first or you might struggle.
-```
+> **ESP8266 Users — Weather & Crypto:** Both the Weather and Crypto Price Ticker features are disabled by default on all ESP8266 builds (`-DDISABLE_WEATHER_FEATURE`, `-DDISABLE_CRYPTO_FEATURE`). Enabling either will make WiFi setup (Captive Portal) unreliable due to heap pressure — you will likely be unable to scan for or enter a WiFi SSID. You can flash a firmware with these features enabled *after* WiFi is already configured and they will work fine, but if you ever need to factory-reset and reconfigure WiFi you may need to flash a version without them first.
 
 ### Version Management
 
@@ -398,10 +399,18 @@ Seven clock faces are available across two series, all sourced from the [trip5/M
 **Timer Settings** - Configure countdown timer or stopwatch mode:
 - Duration and Alert sound configuration
 
-**Weather Settings** (ESP32 Only, disabled on ESP8266 by default) - Configure weather display:
+**Weather Settings** *(ESP32 only, disabled on ESP8266 by default)* - Configure weather display:
 - OpenWeatherMap API key integration
-- City/Location configuration
-- Units (Metric/Imperial)
+- City/Location configuration (by GPS coordinates)
+- Units (Celsius/Fahrenheit)
+- Independent fetch interval (how often to call the API) and display interval (how often to interrupt the clock)
+
+**Crypto Price Ticker** *(ESP32 only, disabled on ESP8266 by default)* - Configure live cryptocurrency prices:
+- Up to 10 coins via [CoinPaprika](https://coinpaprika.com/) IDs (e.g. `btc-bitcoin`, `eth-ethereum`) — no API key required
+- Display currency: USD, EUR, GBP, JPY, BTC, ETH
+- Independent fetch interval (15 min–4h) and display interval (1 min–4h)
+- Configurable scroll repetitions and brightness
+- See **[Crypto Ticker Guide](docs/CRYPTO_TICKER.md)** for full details, coin ID list, and rate limit information
 
 **Sleep Mode** - Configure schedule:
 - Scheduled display dimming or blackout windows
@@ -779,6 +788,7 @@ The device stores configuration in LittleFS flash filesystem:
 - `/clock.config` - Clock and timezone settings
 - `/timer.config` - Timer and stopwatch settings
 - `/weather.config` - OpenWeatherMap integration settings
+- `/crypto_config.json` - Crypto price ticker settings (coins, currency, intervals)
 - `/sleep_mode.config` - Sleep schedule configurations
 - `/alarm.config` - Schedule recurring daily alarms
 - `/recurrent_alarm.config` - Fixed interval alerts (Home Assistant discovery is ESP32-only)
@@ -791,6 +801,19 @@ Current firmware version is defined in `platformio.ini` and displayed on the web
 - **NodeMCU (ESP8266)**: `rda_msg_board_nodemcu_4m_v0.9.4.bin` / `rda_msg_board_nodemcu_8m_v0.9.4.bin`
 - **Wemos D1 Mini (ESP8266)**: `rda_msg_board_d1_mini_4m_v0.9.4.bin` / `rda_msg_board_d1_mini_8m_v0.9.4.bin`
 - **ESP32 DevKit**: `rda_msg_board_esp32_4m_v0.9.4.bin` / `rda_msg_board_esp32_8m_v0.9.4.bin`
+
+## Attribution & Disclaimer
+
+### Cryptocurrency Data
+
+**Data Source:** All cryptocurrency price data is fetched from the [CoinPaprika API](https://api.coinpaprika.com/).
+
+**Personal Use Only:** This is a hobbyist project created for educational and personal purposes. In accordance with [CoinPaprika's Terms of Use](https://coinpaprika.com/terms-of-use/):
+- This software does not support commercial redistribution.
+- Users are responsible for adhering to the free plan rate limits (20,000 requests/month).
+- Any individual or entity selling hardware pre-loaded with this software is responsible for securing a commercial/Enterprise license from CoinPaprika.
+
+**Liability:** The developer of this project is not responsible for any API bans, financial losses, or legal actions taken by third-party data providers against the user.
 
 ## License
 
@@ -813,6 +836,7 @@ This project relies on the excellent open-source libraries and tools from the Ar
 - **[WiFiManager](https://github.com/tzapu/WiFiManager)** by tzapu - WiFi configuration portal that makes initial device setup painless.
 - **[ArduinoJson](https://github.com/bblanchon/ArduinoJson)** by Benoit Blanchon - Efficient JSON parsing and serialization library.
 - **[PubSubClient](https://github.com/knolleary/pubsubclient)** by Nick O'Leary - MQTT client library for connecting to MQTT brokers.
+- **[CoinPaprika](https://coinpaprika.com/)** - Free cryptocurrency market data API powering the Crypto Price Ticker feature. No API key required on the free tier.
 - The entire [PlatformIO](https://platformio.org/) team for the excellent build system and development environment.
 
 ## Documentation
@@ -824,6 +848,7 @@ Detailed documentation for specific features and integrations:
 - **[MQTT Examples](docs/MQTT_EXAMPLES.md)** - CLI and script examples for MQTT control
 - **[HTTP API Examples](docs/HTTP_API_EXAMPLES.md)** - Comprehensive guide to the REST API
 - **[MQTT TLS Implementation](docs/MQTT_TLS_IMPLEMENTATION.md)** - Technical details of SSL/TLS security on ESP32
+- **[Crypto Price Ticker](docs/CRYPTO_TICKER.md)** - Coin IDs, rate limits, build flags, HA integration
 - **[Architecture](docs/ARCHITECTURE.md)** - System architecture and module documentation
 
 ## Code Organization
@@ -833,28 +858,7 @@ The codebase is modularly organized for maintainability:
 - **Web Layer**: `web_server`, `config_manager`, `web_data`, `web_pages_*` - HTTP interface and configuration
 - **MQTT Layer**: `mqtt`, `mqtt_discovery_*` - MQTT client and Home Assistant integration
 - **Core Logic**: `functions`, `utf8_utils`, `buzzer_utils` - Display control, character encoding, audio feedback
-- **Configuration**: JSON files in LittleFS (`/web_config.json`, `/mqtt_config.json`, `/defaults_config.json`, `/general.config`)
-
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed module documentation.
-
-## Documentation
-
-Detailed documentation for specific features and integrations:
-
-- **[Installation & Setup](docs/HARDWARE_REFERENCE.md)** - Hardware pinning and resource allocation
-- **[Home Assistant Integration](docs/HOME_ASSISTANT_INTEGRATION.md)** - Guide for integrating with Home Assistant
-- **[MQTT Examples](docs/MQTT_EXAMPLES.md)** - CLI and script examples for MQTT control
-- **[HTTP API Examples](docs/HTTP_API_EXAMPLES.md)** - Comprehensive guide to: REST API
-- **[MQTT TLS Implementation](docs/MQTT_TLS_IMPLEMENTATION.md)** - Technical details of SSL/TLS security on ESP32
-- **[Architecture](docs/ARCHITECTURE.md)** - System architecture and module documentation
-
-## Code Organization
-
-The codebase is modularly organized for maintainability:
-
-- **Web Layer**: `web_server`, `config_manager`, `web_data`, `web_pages_*` - HTTP interface and configuration
-- **MQTT Layer**: `mqtt`, `mqtt_discovery_*` - MQTT client and Home Assistant integration
-- **Core Logic**: `functions`, `utf8_utils`, `buzzer_utils` - Display control, character encoding, audio feedback
+- **Feature Modules**: `weather`, `crypto`, `timer` - Optional ESP32 features
 - **Configuration**: JSON files in LittleFS (`/web_config.json`, `/mqtt_config.json`, `/defaults_config.json`, `/general.config`)
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed module documentation.

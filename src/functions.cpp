@@ -17,6 +17,9 @@
 #ifndef DISABLE_WEATHER_FEATURE
 #include "weather.h"
 #endif
+#ifndef DISABLE_CRYPTO_FEATURE
+#include "crypto.h"
+#endif
 #include "chirp_library.h"
 #include "buzzer_utils.h"
 // 6-series fonts (centred in 8-row display, compact height — good for 4-module clocks)
@@ -287,6 +290,13 @@ void scrollTextParola() {
 #ifndef DISABLE_WEATHER_FEATURE
   // Don't process messages when weather is active
   if (currentDisplayMode == MODE_WEATHER || currentDisplayMode == MODE_WEATHER_EXIT) {
+    return;
+  }
+#endif
+
+#ifndef DISABLE_CRYPTO_FEATURE
+  // Don't process messages when crypto ticker is active
+  if (currentDisplayMode == MODE_CRYPTO || currentDisplayMode == MODE_CRYPTO_EXIT) {
     return;
   }
 #endif
@@ -791,7 +801,15 @@ void updateClockDisplay() {
 // Main state machine for switching between message, clock, and timer modes
 void updateDisplayMode() {
   // Priority: Timer (when running) > Clock (when enabled) > Message
-  
+
+  // Scroll repeat counters — reset when entering the respective mode from MODE_CLOCK
+#ifndef DISABLE_WEATHER_FEATURE
+  static int weatherScrollCount = 0;
+#endif
+#ifndef DISABLE_CRYPTO_FEATURE
+  static int cryptoScrollCount = 0;
+#endif
+
 #ifndef DISABLE_TIMER_FEATURE
   // Check if timer should take over from any mode
   if (timerEnabled && timerRunning && currentDisplayMode != MODE_TIMER) {
@@ -879,18 +897,40 @@ void updateDisplayMode() {
       {
         static unsigned long lastWeatherDisplayTime = 0;
 
-        // Weather display interval: show weather every 60 seconds while in clock mode
-        unsigned long weatherDisplayInterval = 60000UL;  // 1 minute between weather displays
+        unsigned long weatherDisplayInterval = (unsigned long)atoi(weatherConfig.displayIntervalMinutes) * 60000UL;
 
         if (shouldDisplayWeather() &&
             (lastWeatherDisplayTime == 0 || millis() - lastWeatherDisplayTime >= weatherDisplayInterval)) {
           // Time to show weather
           currentDisplayMode = MODE_WEATHER;
           weatherDisplayStart = millis();
+          weatherScrollCount = 0;
           lastWeatherDisplayTime = millis();
           P.displayClear();
           displayWeather(true);
           Serial.println(F("Transitioning to weather mode"));
+          publishDisplayModeState();
+          break;
+        }
+      }
+#endif
+
+#ifndef DISABLE_CRYPTO_FEATURE
+      // Check if crypto prices should be displayed
+      {
+        static unsigned long lastCryptoDisplayTime = 0;
+
+        unsigned long cryptoDisplayInterval = (unsigned long)atoi(cryptoConfig.displayIntervalMinutes) * 60000UL;
+
+        if (shouldDisplayCrypto() &&
+            (lastCryptoDisplayTime == 0 || millis() - lastCryptoDisplayTime >= cryptoDisplayInterval)) {
+          currentDisplayMode = MODE_CRYPTO;
+          cryptoDisplayStart = millis();
+          cryptoScrollCount = 0;
+          lastCryptoDisplayTime = millis();
+          P.displayClear();
+          displayCrypto(true);
+          Serial.println(F("Transitioning to crypto mode"));
           publishDisplayModeState();
           break;
         }
@@ -1018,50 +1058,36 @@ void updateDisplayMode() {
 
 #ifndef DISABLE_WEATHER_FEATURE
     case MODE_WEATHER:
-      // Check if weather display duration expired
+      // Alarm interrupts immediately (time-critical). Messages and timers wait for the
+      // current scroll to finish so weather is never cut off mid-word.
       {
-        unsigned long displayDuration = (unsigned long)atoi(weatherConfig.displayDurationSeconds) * 1000UL;
-
-        if (millis() - weatherDisplayStart >= displayDuration) {
-          // Weather display time expired, exit
-          currentDisplayMode = MODE_WEATHER_EXIT;
-          Serial.println(F("Weather display complete, exiting"));
-          break;
-        }
-
-        // Check if new message arrived (higher priority)
-        if (newMessageAvailable) {
-          currentDisplayMode = MODE_WEATHER_EXIT;
-          Serial.println(F("Weather interrupted by message"));
-          break;
-        }
-
-#ifndef DISABLE_TIMER_FEATURE
-        // Check if timer started (higher priority)
-        if (timerEnabled && timerRunning) {
-          currentDisplayMode = MODE_TIMER;
-          P.displayClear();
-          displayTimer(true);
-          Serial.println(F("Weather interrupted by timer"));
-          publishDisplayModeState();
-          break;
-        }
-#endif
-
 #ifndef DISABLE_ALARM_FEATURE
-        // Check if alarm triggered (higher priority)
         if (alarmActive) {
-          currentDisplayMode = MODE_ALARM;
+          currentDisplayMode = MODE_WEATHER_EXIT;
           Serial.println(F("Weather interrupted by alarm"));
           break;
         }
 #endif
 
-        // Continue weather display animation
+        // Wait for the current scroll animation to complete before making any exit decision.
+        // This prevents mid-scroll cut-offs regardless of what triggered the exit.
         if (P.displayAnimate()) {
-          // Animation complete (scrolling done), show again or exit
-          displayWeather(true);  // Restart scrolling
+          weatherScrollCount++;
+          int maxScrolls = atoi(weatherConfig.displayRepeatCount);
+
+          // Exit when: all repetitions done, a message is waiting, or timer started
+          bool shouldExit = (weatherScrollCount >= maxScrolls) || newMessageAvailable;
+#ifndef DISABLE_TIMER_FEATURE
+          if (timerRunning) shouldExit = true;
+#endif
+          if (shouldExit) {
+            currentDisplayMode = MODE_WEATHER_EXIT;
+            Serial.println(F("Weather scroll(s) complete, exiting"));
+          } else {
+            displayWeather(true);  // Start next repetition
+          }
         }
+        // Note: newMessageAvailable / timerRunning deliberately NOT checked mid-scroll.
       }
       break;
 
@@ -1086,6 +1112,64 @@ void updateDisplayMode() {
           // Fallback to message mode
           currentDisplayMode = MODE_MESSAGE;
           Serial.println(F("Weather exit complete, message mode"));
+        }
+        publishDisplayModeState();
+        publishClockDisplayActiveState();
+      }
+      break;
+#endif
+
+#ifndef DISABLE_CRYPTO_FEATURE
+    case MODE_CRYPTO:
+      // Alarm interrupts immediately (time-critical). Messages and timers wait for the
+      // current scroll to finish so prices are never cut off mid-display.
+      {
+#ifndef DISABLE_ALARM_FEATURE
+        if (alarmActive) {
+          currentDisplayMode = MODE_CRYPTO_EXIT;
+          Serial.println(F("Crypto interrupted by alarm"));
+          break;
+        }
+#endif
+
+        // Wait for the current scroll animation to complete before making any exit decision.
+        if (P.displayAnimate()) {
+          cryptoScrollCount++;
+          int maxScrolls = atoi(cryptoConfig.displayRepeatCount);
+
+          bool shouldExit = (cryptoScrollCount >= maxScrolls) || newMessageAvailable;
+#ifndef DISABLE_TIMER_FEATURE
+          if (timerRunning) shouldExit = true;
+#endif
+          if (shouldExit) {
+            currentDisplayMode = MODE_CRYPTO_EXIT;
+            Serial.println(F("Crypto scroll(s) complete, exiting"));
+          } else {
+            displayCrypto(true);  // Start next repetition
+          }
+        }
+        // Note: newMessageAvailable / timerRunning deliberately NOT checked mid-scroll.
+      }
+      break;
+
+    case MODE_CRYPTO_EXIT:
+      // Transition back to clock mode
+      if (P.displayAnimate()) {
+        P.displayClear();
+
+        if (newMessageAvailable) {
+          currentDisplayMode = MODE_MESSAGE;
+          Serial.println(F("Crypto exit complete, starting message"));
+        } else if (clockEnabled) {
+          currentDisplayMode = MODE_CLOCK;
+          lastClockUpdate = millis();
+          lastColonToggle = millis();
+          clockColonVisible = true;
+          displayClock(true);
+          Serial.println(F("Crypto exit complete, returning to clock"));
+        } else {
+          currentDisplayMode = MODE_MESSAGE;
+          Serial.println(F("Crypto exit complete, message mode"));
         }
         publishDisplayModeState();
         publishClockDisplayActiveState();

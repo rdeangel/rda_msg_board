@@ -191,7 +191,7 @@ function checkPlatformFeatures() {
         weatherBtn.style.cursor = 'not-allowed';
         // Allow pointer events so tooltip works, but disable click
         weatherBtn.style.pointerEvents = 'auto';
-        weatherBtn.title = 'Feature Disabled via build flag (DISABLE_WEATHER_FEATURE)';
+        weatherBtn.title = 'ESP32 only — not supported on ESP8266 due to heap constraints and instability. Disabled via -DDISABLE_WEATHER_FEATURE build flag.';
         weatherBtn.onclick = function(e) { e.preventDefault(); return false; };
         // Center content for disabled state
         weatherBtn.style.justifyContent = 'center';
@@ -205,6 +205,31 @@ function checkPlatformFeatures() {
         weatherBtn.title = '';
         weatherBtn.onclick = function() { openWeatherModal(); };
         if (weatherIcon) weatherIcon.style.display = 'none';
+      }
+
+      // Handle Crypto Settings button
+      var cryptoFeature = xmlDoc.getElementsByTagName('cryptofeature').length > 0 ?
+                          xmlDoc.getElementsByTagName('cryptofeature')[0].childNodes[0].nodeValue : 'false';
+
+      var cryptoBtn = document.getElementById('CRYPTO_SETTINGS_BTN');
+      var cryptoIcon = document.getElementById('CRYPTO_NOT_SUPPORTED_ICON');
+
+      if (cryptoFeature === 'false') {
+        cryptoBtn.style.opacity = '0.5';
+        cryptoBtn.style.cursor = 'not-allowed';
+        cryptoBtn.title = 'ESP32 only — not supported on ESP8266 due to heap constraints and instability. Disabled via -DDISABLE_CRYPTO_FEATURE build flag.';
+        cryptoBtn.onclick = function(e) { e.preventDefault(); return false; };
+        cryptoBtn.style.justifyContent = 'center';
+        if (cryptoIcon) {
+          cryptoIcon.style.display = 'block';
+          cryptoIcon.style.marginLeft = '8px';
+        }
+      } else {
+        cryptoBtn.style.cursor = 'pointer';
+        cryptoBtn.style.pointerEvents = 'auto';
+        cryptoBtn.title = '';
+        cryptoBtn.onclick = function() { openCryptoModal(); };
+        if (cryptoIcon) cryptoIcon.style.display = 'none';
       }
     }
   };
@@ -1216,6 +1241,26 @@ function saveSleepModeConfig(event, shouldClose) {
   request.send(params);
 }
 
+// Progressive slider helpers — slider position (index) maps to a non-linear value array
+var WEATHER_FETCH_STEPS    = [5, 10, 15, 20, 30, 45, 60, 90, 120];
+var CRYPTO_FETCH_STEPS     = [15, 20, 30, 45, 60, 90, 120, 180, 240];
+var DISPLAY_INTERVAL_STEPS = [1, 2, 5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 240];
+
+function stepsVal(steps, idx) {
+  return steps[Math.max(0, Math.min(Math.round(idx), steps.length - 1))];
+}
+function stepsIdx(steps, val) {
+  var best = 0, bestDiff = Math.abs(steps[0] - val);
+  for (var i = 1; i < steps.length; i++) {
+    var d = Math.abs(steps[i] - val);
+    if (d < bestDiff) { bestDiff = d; best = i; }
+  }
+  return best;
+}
+function stepsLabel(val) {
+  return val >= 60 ? (val / 60) + 'h' : val + ' min';
+}
+
 // Weather Modal Functions
 function openWeatherModal() {
   var request = new XMLHttpRequest();
@@ -1236,14 +1281,18 @@ function openWeatherModal() {
         document.getElementById('WEATHER_UNIT_C').checked = true;
       }
 
-      // Sliders
-      var interval = parseInt(data.updateInterval) || 30;
-      document.getElementById('WEATHER_UPDATE_INTERVAL').value = interval;
-      document.getElementById('WEATHER_INTERVAL_VAL').textContent = interval;
+      // Progressive sliders
+      var fetchIdx = stepsIdx(WEATHER_FETCH_STEPS, parseInt(data.updateInterval) || 30);
+      document.getElementById('WEATHER_UPDATE_INTERVAL').value = fetchIdx;
+      document.getElementById('WEATHER_INTERVAL_VAL').textContent = stepsLabel(WEATHER_FETCH_STEPS[fetchIdx]);
 
-      var duration = parseInt(data.displayDuration) || 10;
-      document.getElementById('WEATHER_DISPLAY_DURATION').value = duration;
-      document.getElementById('WEATHER_DURATION_VAL').textContent = duration;
+      var dispIdx = stepsIdx(DISPLAY_INTERVAL_STEPS, parseInt(data.displayInterval) || 5);
+      document.getElementById('WEATHER_DISPLAY_INTERVAL').value = dispIdx;
+      document.getElementById('WEATHER_DISPLAY_INTERVAL_VAL').textContent = stepsLabel(DISPLAY_INTERVAL_STEPS[dispIdx]);
+
+      var repeatCount = parseInt(data.displayRepeat) || 2;
+      document.getElementById('WEATHER_DISPLAY_REPEAT').value = repeatCount;
+      document.getElementById('WEATHER_REPEAT_VAL').textContent = repeatCount;
 
       var brightness = parseInt(data.brightness) || 5;
       document.getElementById('WEATHER_BRIGHTNESS').value = brightness;
@@ -1301,8 +1350,9 @@ function saveWeatherConfig(event, shouldClose) {
     latitude: document.getElementById('WEATHER_LATITUDE').value,
     longitude: document.getElementById('WEATHER_LONGITUDE').value,
     temperatureUnit: document.querySelector('input[name="WeatherTempUnit"]:checked').value,
-    updateIntervalMinutes: document.getElementById('WEATHER_UPDATE_INTERVAL').value,
-    displayDurationSeconds: document.getElementById('WEATHER_DISPLAY_DURATION').value,
+    updateIntervalMinutes: String(stepsVal(WEATHER_FETCH_STEPS, document.getElementById('WEATHER_UPDATE_INTERVAL').value)),
+    displayIntervalMinutes: String(stepsVal(DISPLAY_INTERVAL_STEPS, document.getElementById('WEATHER_DISPLAY_INTERVAL').value)),
+    displayRepeatCount: document.getElementById('WEATHER_DISPLAY_REPEAT').value,
     brightness: document.getElementById('WEATHER_BRIGHTNESS').value
   };
 
@@ -1340,6 +1390,157 @@ function refreshWeather() {
     }
   };
   request.open('POST', '/api/weather/refresh', true);
+  request.send();
+}
+
+// Crypto Price Ticker Modal Functions
+function openCryptoModal() {
+  var request = new XMLHttpRequest();
+  request.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      var data = JSON.parse(this.responseText);
+
+      // Populate form fields
+      document.getElementById('CRYPTOENABLED').checked = (data.enabled === true || data.enabled === 'on');
+      document.getElementById('CRYPTO_API_KEY').value = data.apiKey || '';
+      document.getElementById('CRYPTO_COINS').value = data.coins || 'btc-bitcoin,eth-ethereum';
+
+      // Currency radio buttons
+      var currency = data.currency || 'USD';
+      var currencyRadios = document.querySelectorAll('input[name="CryptoCurrency"]');
+      currencyRadios.forEach(function(r) { r.checked = (r.value === currency); });
+
+      // Progressive sliders
+      var fetchIdx = stepsIdx(CRYPTO_FETCH_STEPS, parseInt(data.updateInterval) || 30);
+      document.getElementById('CRYPTO_FETCH_INTERVAL').value = fetchIdx;
+      document.getElementById('CRYPTO_FETCH_INTERVAL_VAL').textContent = stepsLabel(CRYPTO_FETCH_STEPS[fetchIdx]);
+
+      var dispIdx = stepsIdx(DISPLAY_INTERVAL_STEPS, parseInt(data.displayInterval) || 5);
+      document.getElementById('CRYPTO_DISPLAY_INTERVAL').value = dispIdx;
+      document.getElementById('CRYPTO_DISPLAY_INTERVAL_VAL').textContent = stepsLabel(DISPLAY_INTERVAL_STEPS[dispIdx]);
+
+      // Sliders
+      var repeatCount = parseInt(data.displayRepeat) || 2;
+      document.getElementById('CRYPTO_DISPLAY_REPEAT').value = repeatCount;
+      document.getElementById('CRYPTO_REPEAT_VAL').textContent = repeatCount;
+
+      var brightness = parseInt(data.brightness) || 5;
+      document.getElementById('CRYPTO_BRIGHTNESS').value = brightness;
+      document.getElementById('CRYPTO_BRI_VAL').textContent = brightness;
+
+      // Coin counter
+      updateCoinCount();
+
+      // Status section
+      updateCryptoStatus(data);
+
+      document.getElementById('cryptoModal').classList.add('show');
+    }
+  };
+  request.open('GET', '/api/crypto/status', true);
+  request.send();
+}
+
+function updateCryptoStatus(data) {
+  var statusEl = document.getElementById('CRYPTO_STATUS');
+  if (data.dataValid && data.priceBuffer && data.priceBuffer.length > 0) {
+    statusEl.textContent = data.priceBuffer;
+    statusEl.style.color = 'var(--text)';
+  } else if (!data.coins || data.coins.length === 0) {
+    statusEl.textContent = 'Not configured — enter coin IDs to enable';
+    statusEl.style.color = '#888';
+  } else {
+    statusEl.textContent = 'Waiting for data...';
+    statusEl.style.color = '#888';
+  }
+
+  var lastEl = document.getElementById('CRYPTO_LAST_UPDATE');
+  if (lastEl) {
+    var ago = data.lastUpdateAgo;
+    if (typeof ago === 'number' && ago >= 0) {
+      if (ago < 60) lastEl.textContent = 'Updated ' + ago + 's ago';
+      else if (ago < 3600) lastEl.textContent = 'Updated ' + Math.round(ago / 60) + 'min ago';
+      else lastEl.textContent = 'Updated ' + Math.round(ago / 3600) + 'h ago';
+    } else {
+      lastEl.textContent = 'No data fetched yet';
+    }
+  }
+}
+
+function closeCryptoModal() {
+  document.getElementById('cryptoModal').classList.remove('show');
+}
+
+function updateCoinCount() {
+  var coinsVal = document.getElementById('CRYPTO_COINS').value.trim();
+  var count = coinsVal.length === 0 ? 0 : coinsVal.split(',').filter(function(s) { return s.trim().length > 0; }).length;
+  var counterEl = document.getElementById('CRYPTO_COIN_COUNT');
+  if (counterEl) {
+    counterEl.textContent = count + '/10 coins';
+    counterEl.style.color = count > 10 ? 'var(--warning)' : 'var(--subtext)';
+  }
+}
+
+function saveCryptoConfig(event, shouldClose) {
+  if (event) event.preventDefault();
+  if (shouldClose === undefined) shouldClose = true;
+
+  var enabledCheckbox = document.getElementById('CRYPTOENABLED');
+  var coinsInput = document.getElementById('CRYPTO_COINS');
+
+  // Validate coin count
+  var coinsVal = coinsInput.value.trim();
+  var coinList = coinsVal.length === 0 ? [] : coinsVal.split(',').filter(function(s) { return s.trim().length > 0; });
+  if (coinList.length > 10) {
+    showToast('Too many coins — maximum 10 allowed', 'error');
+    return;
+  }
+
+  var selectedCurrency = document.querySelector('input[name="CryptoCurrency"]:checked');
+
+  var formData = {
+    enabled: enabledCheckbox.checked ? 'on' : 'off',
+    apiKey: document.getElementById('CRYPTO_API_KEY').value.trim(),
+    coins: coinsInput.value.trim(),
+    currency: selectedCurrency ? selectedCurrency.value : 'USD',
+    updateIntervalMinutes: String(stepsVal(CRYPTO_FETCH_STEPS, document.getElementById('CRYPTO_FETCH_INTERVAL').value)),
+    displayIntervalMinutes: String(stepsVal(DISPLAY_INTERVAL_STEPS, document.getElementById('CRYPTO_DISPLAY_INTERVAL').value)),
+    displayRepeatCount: document.getElementById('CRYPTO_DISPLAY_REPEAT').value,
+    brightness: document.getElementById('CRYPTO_BRIGHTNESS').value
+  };
+
+  var request = new XMLHttpRequest();
+  request.onreadystatechange = function() {
+    if (this.readyState == 4) {
+      if (this.status == 200) {
+        if (shouldClose) closeCryptoModal();
+        showToast('Crypto settings saved successfully!', 'success');
+      } else {
+        var errMsg = 'Failed to save Crypto settings';
+        try { var resp = JSON.parse(this.responseText); if (resp.error) errMsg = resp.error; } catch(e) {}
+        showToast(errMsg, 'error');
+      }
+    }
+  };
+  request.open('POST', '/api/crypto/save', true);
+  request.setRequestHeader('Content-Type', 'application/json');
+  request.send(JSON.stringify(formData));
+}
+
+function refreshCrypto() {
+  var request = new XMLHttpRequest();
+  request.onreadystatechange = function() {
+    if (this.readyState == 4) {
+      if (this.status == 200) {
+        var data = JSON.parse(this.responseText);
+        updateCryptoStatus(data);
+        showToast('Crypto data refresh requested!', 'success');
+      } else {
+        showToast('Failed to refresh crypto', 'error');
+      }
+    }
+  };
+  request.open('POST', '/api/crypto/refresh', true);
   request.send();
 }
 
@@ -1777,6 +1978,21 @@ window.onload = function() {
       </svg>
       <span>Weather</span>
       <svg id="WEATHER_NOT_SUPPORTED_ICON" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" style="display:none; margin-left: auto;">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </button>
+
+    <!-- Crypto Price Ticker Button -->
+    <button type="button" id="CRYPTO_SETTINGS_BTN" onclick="openCryptoModal()" class="config-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M9 8h5a2 2 0 0 1 0 4H9v4h5a2 2 0 0 0 0-4"/>
+        <line x1="9" y1="12" x2="14" y2="12"/>
+      </svg>
+      <span>Crypto Prices</span>
+      <svg id="CRYPTO_NOT_SUPPORTED_ICON" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" style="display:none; margin-left: auto;">
         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
         <line x1="12" y1="9" x2="12" y2="13"/>
         <line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -2530,6 +2746,147 @@ window.onload = function() {
   </div>
 </div>
 
+<!-- Crypto Price Ticker Modal -->
+<div id="cryptoModal" class="modal-overlay">
+  <div class="modal" style="max-width: 580px;">
+    <h3 style="color: var(--accent); display: flex; align-items: center; justify-content: center; gap: 10px;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M9 8h5a2 2 0 0 1 0 4H9v4h5a2 2 0 0 0 0-4"/>
+        <line x1="9" y1="12" x2="14" y2="12"/>
+      </svg>
+      Crypto Price Ticker
+    </h3>
+    <p style="color: var(--subtext); margin-bottom: 20px;">Display live cryptocurrency prices via CoinPaprika API (free, no API key required)</p>
+
+    <form id="crypto_config_form" onsubmit="saveCryptoConfig(event)" style="display: flex; flex-direction: column; overflow: hidden; height: 100%;">
+      <div class="modal-scroll-content">
+
+        <!-- Enable Toggle -->
+        <div class="toggle-card">
+          <span class="label-text">Enable Crypto Ticker</span>
+          <label class="switch">
+            <input type="checkbox" id="CRYPTOENABLED" name="CryptoEnabled" value="on">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- API Key (optional) -->
+        <label for="CRYPTO_API_KEY">CoinPaprika API Key <span style="color: var(--subtext); font-weight: normal;">(optional)</span></label>
+        <input type="text" id="CRYPTO_API_KEY" name="CryptoApiKey" placeholder="Leave empty for unauthenticated access" autocomplete="off">
+        <p style="font-size: 0.85rem; color: var(--subtext); margin: 5px 0 15px 0;">
+          Without a key: 1,000 requests/day limit, IP-based. With a free registered key: 20,000/month, account-based.
+          Register free at <a href="https://coinpaprika.com/api/" target="_blank" style="color: var(--accent);">coinpaprika.com/api</a>.
+        </p>
+
+        <!-- Coins -->
+        <label for="CRYPTO_COINS">
+          Coin IDs (comma-separated, max 10)
+          <span id="CRYPTO_COIN_COUNT" style="font-size: 0.8rem; color: var(--subtext); margin-left: 8px;">2/10 coins</span>
+        </label>
+        <textarea id="CRYPTO_COINS" name="CryptoCoins" rows="3"
+                  oninput="updateCoinCount()"
+                  style="font-family: monospace; font-size: 0.9rem; padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text); resize: vertical; width: 100%; box-sizing: border-box;">btc-bitcoin,eth-ethereum</textarea>
+        <p style="font-size: 0.85rem; color: var(--subtext); margin: 5px 0 5px 0;">
+          Uses CoinPaprika coin IDs — format: <code style="color: var(--accent);">btc-bitcoin</code>, <code style="color: var(--accent);">eth-ethereum</code>
+        </p>
+        <p style="font-size: 0.85rem; color: var(--subtext); margin: 0 0 15px 0;">
+          Find all IDs at <a href="https://coinpaprika.com/coins/" target="_blank" style="color: var(--accent);">coinpaprika.com/coins</a>.
+          Popular IDs: <code>sol-solana</code>, <code>bnb-binance-coin</code>, <code>xrp-xrp</code>, <code>ada-cardano</code>, <code>doge-dogecoin</code>, <code>dot-polkadot</code>, <code>ltc-litecoin</code>, <code>avax-avalanche</code>
+        </p>
+
+        <!-- Display Currency -->
+        <label>Display Currency</label>
+        <div style="display: flex; flex-wrap: wrap; gap: 15px; margin: 10px 0 20px 0;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="CryptoCurrency" value="USD" checked style="width: auto;">
+            <span>USD ($)</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="CryptoCurrency" value="EUR" style="width: auto;">
+            <span>EUR</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="CryptoCurrency" value="GBP" style="width: auto;">
+            <span>GBP</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="CryptoCurrency" value="JPY" style="width: auto;">
+            <span>JPY</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="CryptoCurrency" value="BTC" style="width: auto;">
+            <span>BTC</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="CryptoCurrency" value="ETH" style="width: auto;">
+            <span>ETH</span>
+          </label>
+        </div>
+
+        <!-- Fetch Interval -->
+        <label for="CRYPTO_FETCH_INTERVAL">Fetch Interval: <span id="CRYPTO_FETCH_INTERVAL_VAL">30 min</span></label>
+        <input type="range" id="CRYPTO_FETCH_INTERVAL" min="0" max="8" value="2" step="1"
+               oninput="document.getElementById('CRYPTO_FETCH_INTERVAL_VAL').textContent=stepsLabel(CRYPTO_FETCH_STEPS[this.value])"
+               style="width: 100%; margin-bottom: 5px;">
+        <p style="font-size: 0.85rem; color: var(--subtext); margin: 0 0 15px 0;">How often to fetch fresh prices from the API. (15 min – 4h) &nbsp;&mdash;&nbsp; At 30-min intervals with 10 coins: ~7,200 calls/month, within the 20,000/month free limit.</p>
+
+        <!-- Display Interval -->
+        <label for="CRYPTO_DISPLAY_INTERVAL">Display Interval: <span id="CRYPTO_DISPLAY_INTERVAL_VAL">5 min</span></label>
+        <input type="range" id="CRYPTO_DISPLAY_INTERVAL" min="0" max="12" value="2" step="1"
+               oninput="document.getElementById('CRYPTO_DISPLAY_INTERVAL_VAL').textContent=stepsLabel(DISPLAY_INTERVAL_STEPS[this.value])"
+               style="width: 100%; margin-bottom: 5px;">
+        <p style="font-size: 0.85rem; color: var(--subtext); margin: 0 0 15px 0;">How often to interrupt the clock to show prices. Can be more frequent than the fetch interval since data is cached. (1 min – 4h)</p>
+
+        <!-- Scroll Repetitions -->
+        <label for="CRYPTO_DISPLAY_REPEAT">Scroll Repetitions: <span id="CRYPTO_REPEAT_VAL">2</span></label>
+        <input type="range" id="CRYPTO_DISPLAY_REPEAT" name="CryptoDisplayRepeat" min="1" max="5" value="2" step="1" oninput="document.getElementById('CRYPTO_REPEAT_VAL').textContent=this.value" style="width: 100%; margin-bottom: 5px;">
+        <p style="font-size: 0.85rem; color: var(--subtext); margin: 0 0 15px 0;">Number of times to scroll prices before returning to clock. Current scroll always completes before exiting.</p>
+
+        <!-- Brightness -->
+        <label for="CRYPTO_BRIGHTNESS">Brightness: <span id="CRYPTO_BRI_VAL">5</span></label>
+        <input type="range" id="CRYPTO_BRIGHTNESS" name="CryptoBrightness" min="0" max="15" value="5" oninput="document.getElementById('CRYPTO_BRI_VAL').textContent=this.value" style="width: 100%; margin-bottom: 15px;">
+
+        <!-- Current Status -->
+        <div style="background: #252525; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin: 15px 0;">
+          <div style="font-size: 0.85rem; color: var(--subtext);">Current Prices</div>
+          <div id="CRYPTO_STATUS" style="font-size: 1rem; color: var(--text); word-break: break-all;">Not configured</div>
+          <div id="CRYPTO_LAST_UPDATE" style="font-size: 0.8rem; color: var(--subtext); margin-top: 5px;"></div>
+        </div>
+
+        <!-- Refresh Button -->
+        <button type="button" onclick="refreshCrypto()" class="btn" style="background: #0366d6; border-color: #0366d6; margin: 10px 0;">
+          Refresh Prices Now
+        </button>
+
+        <!-- Clock Dependency Note -->
+        <div style="background: rgba(255, 152, 0, 0.1); border: 1px solid #ff9800; border-radius: 8px; padding: 12px; margin: 15px 0;">
+          <p style="font-size: 0.85rem; color: #ff9800; margin: 0;">
+            Note: Crypto display requires Clock to be enabled. Prices will show periodically between clock updates.
+          </p>
+        </div>
+
+        <!-- Attribution -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 15px 0;">
+          <p style="font-size: 0.8rem; color: var(--subtext); margin: 0;">
+            Data provided by <a href="https://coinpaprika.com/" target="_blank" style="color: var(--accent);">CoinPaprika</a> (free — API key optional, recommended for higher rate limits).
+            <strong style="color: var(--text);">Personal use only</strong> per CoinPaprika&rsquo;s free plan terms &mdash; commercial redistribution is not permitted.
+            Users are responsible for staying within the 20,000 requests/month free limit.
+            See <a href="https://coinpaprika.com/terms-of-use/" target="_blank" style="color: var(--accent);">Terms of Use</a>.
+          </p>
+        </div>
+
+      </div>
+
+      <div class="modal-actions" style="grid-template-columns: 1fr 1fr 1fr; margin-top: auto; padding-top: 15px; border-top: 1px solid #333;">
+        <button type="button" class="btn" onclick="closeCryptoModal()">Close</button>
+        <button type="button" class="btn" onclick="saveCryptoConfig(event, false)" style="background: #238636; border-color: #238636; color: white;">Apply</button>
+        <button type="submit" class="btn btn-confirm">Save &amp; Close</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Weather Configuration Modal -->
 <div id="weatherModal" class="modal-overlay">
   <div class="modal" style="max-width: 550px;">
@@ -2589,13 +2946,24 @@ window.onload = function() {
           </label>
         </div>
 
-        <!-- Update Interval -->
-        <label for="WEATHER_UPDATE_INTERVAL">Update Interval: <span id="WEATHER_INTERVAL_VAL">30</span> minutes</label>
-        <input type="range" id="WEATHER_UPDATE_INTERVAL" name="WeatherUpdateInterval" min="5" max="120" value="30" step="5" oninput="document.getElementById('WEATHER_INTERVAL_VAL').textContent=this.value" style="width: 100%; margin-bottom: 15px;">
+        <!-- Fetch Interval -->
+        <label for="WEATHER_UPDATE_INTERVAL">Fetch Interval: <span id="WEATHER_INTERVAL_VAL">30 min</span></label>
+        <input type="range" id="WEATHER_UPDATE_INTERVAL" min="0" max="8" value="4" step="1"
+               oninput="document.getElementById('WEATHER_INTERVAL_VAL').textContent=stepsLabel(WEATHER_FETCH_STEPS[this.value])"
+               style="width: 100%; margin-bottom: 5px;">
+        <p style="font-size: 0.85rem; color: var(--subtext); margin: 0 0 15px 0;">How often to fetch fresh data from the API. (5 min – 2h)</p>
 
-        <!-- Display Duration -->
-        <label for="WEATHER_DISPLAY_DURATION">Display Duration: <span id="WEATHER_DURATION_VAL">10</span> seconds</label>
-        <input type="range" id="WEATHER_DISPLAY_DURATION" name="WeatherDisplayDuration" min="5" max="60" value="10" step="5" oninput="document.getElementById('WEATHER_DURATION_VAL').textContent=this.value" style="width: 100%; margin-bottom: 15px;">
+        <!-- Display Interval -->
+        <label for="WEATHER_DISPLAY_INTERVAL">Display Interval: <span id="WEATHER_DISPLAY_INTERVAL_VAL">5 min</span></label>
+        <input type="range" id="WEATHER_DISPLAY_INTERVAL" min="0" max="12" value="2" step="1"
+               oninput="document.getElementById('WEATHER_DISPLAY_INTERVAL_VAL').textContent=stepsLabel(DISPLAY_INTERVAL_STEPS[this.value])"
+               style="width: 100%; margin-bottom: 5px;">
+        <p style="font-size: 0.85rem; color: var(--subtext); margin: 0 0 15px 0;">How often to interrupt the clock to show weather. Can be more frequent than the fetch interval since data is cached. (1 min – 4h)</p>
+
+        <!-- Scroll Repetitions -->
+        <label for="WEATHER_DISPLAY_REPEAT">Scroll Repetitions: <span id="WEATHER_REPEAT_VAL">2</span></label>
+        <input type="range" id="WEATHER_DISPLAY_REPEAT" name="WeatherDisplayRepeat" min="1" max="5" value="2" step="1" oninput="document.getElementById('WEATHER_REPEAT_VAL').textContent=this.value" style="width: 100%; margin-bottom: 5px;">
+        <p style="font-size: 0.85rem; color: var(--subtext); margin: 0 0 15px 0;">Number of times to scroll weather before returning to clock. Current scroll always completes before exiting.</p>
 
         <!-- Brightness Slider -->
         <label for="WEATHER_BRIGHTNESS">Brightness: <span id="WEATHER_BRI_VAL">5</span></label>

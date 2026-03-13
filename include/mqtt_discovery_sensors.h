@@ -50,6 +50,10 @@ void handleRebootCommand(const char* payload);
 void handleClearCommand(const char* payload);
 void handleSendCommand(const char* payload);
 
+#ifndef DISABLE_CRYPTO_FEATURE
+void handleCryptoEnableCommand(const char* payload);
+#endif
+
 // Command Subscription & Routing
 void subscribeToHACommands();
 bool isHACommand(const char* topic);

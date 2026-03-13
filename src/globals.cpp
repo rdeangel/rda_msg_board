@@ -294,3 +294,18 @@ bool weatherDataValid = false;
 int weatherCode = 0;
 bool weatherRefreshRequested = false;
 #endif // DISABLE_WEATHER_FEATURE
+
+#ifndef DISABLE_CRYPTO_FEATURE
+// Crypto Price Ticker Configuration
+cryptoConfigObj cryptoConfig;
+const char *cryptoConfigFile = "/crypto_config.json";
+
+// Crypto State Variables
+bool cryptoEnabled = false;
+int cryptoBrightness = 5;
+unsigned long lastCryptoFetch = 0;
+unsigned long cryptoDisplayStart = 0;
+char cryptoPriceBuffer[CRYPTO_PRICE_BUF_SIZE] = "";
+bool cryptoDataValid = false;
+bool cryptoRefreshRequested = false;
+#endif // DISABLE_CRYPTO_FEATURE

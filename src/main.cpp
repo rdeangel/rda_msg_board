@@ -12,6 +12,9 @@
 #ifndef DISABLE_WEATHER_FEATURE
 #include "weather.h"
 #endif
+#ifndef DISABLE_CRYPTO_FEATURE
+#include "crypto.h"
+#endif
 
 #ifdef ESP8266
 #include <sntp.h>
@@ -170,6 +173,9 @@ void setup() {
 #ifndef DISABLE_WEATHER_FEATURE
   initWeatherStoreConfig();
 #endif
+#ifndef DISABLE_CRYPTO_FEATURE
+  initCryptoStoreConfig();
+#endif
 
   //show ip address on serial
   sprintf(assignedIP, "%01d.%01d.%01d.%01d", WiFi.localIP()[0], WiFi.localIP()[1], WiFi.localIP()[2], WiFi.localIP()[3]);
@@ -243,6 +249,10 @@ void loop() {
 
 #ifndef DISABLE_WEATHER_FEATURE
   updateWeather();  // Update weather data periodically
+#endif
+
+#ifndef DISABLE_CRYPTO_FEATURE
+  updateCrypto();  // Update crypto price data periodically
 #endif
 
   #if ENABLE_FLASH_BUTTON

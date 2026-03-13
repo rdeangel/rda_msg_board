@@ -277,9 +277,10 @@ String getWeatherStatusJson() {
   doc["latitude"] = weatherConfig.latitude;
   doc["longitude"] = weatherConfig.longitude;
   doc["updateInterval"] = weatherConfig.updateIntervalMinutes;
+  doc["displayInterval"] = weatherConfig.displayIntervalMinutes;
   doc["temperatureUnit"] = weatherConfig.temperatureUnit;
   doc["brightness"] = weatherConfig.brightness;
-  doc["displayDuration"] = weatherConfig.displayDurationSeconds;
+  doc["displayRepeat"] = weatherConfig.displayRepeatCount;
 
   String output;
   serializeJson(doc, output);
@@ -295,9 +296,10 @@ String getWeatherConfigJson() {
   doc["latitude"] = weatherConfig.latitude;
   doc["longitude"] = weatherConfig.longitude;
   doc["updateIntervalMinutes"] = weatherConfig.updateIntervalMinutes;
+  doc["displayIntervalMinutes"] = weatherConfig.displayIntervalMinutes;
   doc["temperatureUnit"] = weatherConfig.temperatureUnit;
   doc["brightness"] = weatherConfig.brightness;
-  doc["displayDurationSeconds"] = weatherConfig.displayDurationSeconds;
+  doc["displayRepeatCount"] = weatherConfig.displayRepeatCount;
 
   String output;
   serializeJson(doc, output);

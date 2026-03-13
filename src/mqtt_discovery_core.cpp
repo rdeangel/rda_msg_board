@@ -10,6 +10,9 @@
 #ifndef DISABLE_WEATHER_FEATURE
 #include "mqtt_discovery_weather.h"
 #endif
+#ifndef DISABLE_CRYPTO_FEATURE
+#include "mqtt_discovery_crypto.h"
+#endif
 #include "globals.h"
 #include "mqtt.h"
 #include "functions.h"
@@ -267,6 +270,15 @@ void publishDiscoveryMessages() {
 #ifndef DISABLE_WEATHER_FEATURE
   PRINTS("[DEBUG] Publishing Weather Discovery...\n");
   publishWeatherDiscovery();
+  delay(100);
+  yield();
+  PRINT("[DEBUG] Free heap: ", ESP.getFreeHeap());
+  PRINTS(" bytes\n");
+#endif
+
+#ifndef DISABLE_CRYPTO_FEATURE
+  PRINTS("[DEBUG] Publishing Crypto Discovery...\n");
+  publishCryptoDiscovery();
   delay(100);
   yield();
   PRINT("[DEBUG] Free heap: ", ESP.getFreeHeap());

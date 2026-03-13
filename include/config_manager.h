@@ -58,4 +58,11 @@ void saveWeatherConfiguration(const char *configFile, const weatherConfigObj &co
 void initWeatherStoreConfig();
 #endif
 
+#ifndef DISABLE_CRYPTO_FEATURE
+// Crypto Price Ticker Configuration
+void loadCryptoConfiguration(const char *configFile, cryptoConfigObj &config);
+void saveCryptoConfiguration(const char *configFile, const cryptoConfigObj &config);
+void initCryptoStoreConfig();
+#endif
+
 #endif // CONFIG_MANAGER_H

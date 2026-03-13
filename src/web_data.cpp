@@ -78,6 +78,12 @@ void setChangeCredVars() {
   changeCredVars += String("<weatherfeature>false</weatherfeature>");
 #endif
 
+#ifndef DISABLE_CRYPTO_FEATURE
+  changeCredVars += String("<cryptofeature>true</cryptofeature>");
+#else
+  changeCredVars += String("<cryptofeature>false</cryptofeature>");
+#endif
+
   changeCredVars += String("</data>");
 }
 

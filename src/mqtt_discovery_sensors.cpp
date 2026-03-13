@@ -10,6 +10,10 @@
 #ifndef DISABLE_WEATHER_FEATURE
 #include "mqtt_discovery_weather.h"
 #endif
+#ifndef DISABLE_CRYPTO_FEATURE
+#include "mqtt_discovery_crypto.h"
+#include "config_manager.h"
+#endif
 #include "globals.h"
 #include "mqtt.h"
 #include "functions.h"
@@ -928,6 +932,10 @@ void publishAllStates() {
   delay(20);
   publishWeatherState();
 #endif
+#ifndef DISABLE_CRYPTO_FEATURE
+  delay(20);
+  publishCryptoState();
+#endif
   PRINTS("\n=== All States Published ===");
 }
 
@@ -1308,6 +1316,10 @@ void routeHACommand(const char* topic, const char* payload) {
     handleRecurrentAlarmChirpCommand(payload);
   } else if (entity == "recurrent_alarm_disable_weekends") {
     handleRecurrentAlarmDisableWeekendsCommand(payload);
+#ifndef DISABLE_CRYPTO_FEATURE
+  } else if (entity == "crypto_enable") {
+    handleCryptoEnableCommand(payload);
+#endif
 #ifndef DISABLE_TIMER_FEATURE
   } else if (strstr(topic, "/timer_enable/set")) {
     handleTimerEnableCommand(payload);
@@ -1800,6 +1812,10 @@ void publishDisplayModeState() {
     case MODE_WEATHER: modeStr = "WEATHER"; break;
     case MODE_WEATHER_EXIT: modeStr = "WEATHER_EXIT"; break;
 #endif
+#ifndef DISABLE_CRYPTO_FEATURE
+    case MODE_CRYPTO: modeStr = "CRYPTO"; break;
+    case MODE_CRYPTO_EXIT: modeStr = "CRYPTO_EXIT"; break;
+#endif
   }
   mqttClient.publish(topic, modeStr, true);
   PRINT("\nPublished display_mode state: ", modeStr);
@@ -2140,3 +2156,25 @@ void handleAlertChirpCommand(const char* payload) {
 
   PRINT("\nAlert chirp updated to: ", alertChirpDefault);
 }
+
+// ============================================================================
+// CRYPTO ENABLE COMMAND HANDLER
+// ============================================================================
+
+#ifndef DISABLE_CRYPTO_FEATURE
+void handleCryptoEnableCommand(const char* payload) {
+  PRINT("\nHandling crypto_enable command: ", payload);
+
+  bool enabled = (strcasecmp(payload, "ON") == 0);
+  snprintf(cryptoConfig.enabled, sizeof(cryptoConfig.enabled), "%s", enabled ? "on" : "off");
+  cryptoEnabled = enabled;
+  saveCryptoConfiguration(cryptoConfigFile, cryptoConfig);
+
+  // Reset fetch timer so data is refreshed promptly when re-enabled
+  if (cryptoEnabled) {
+    lastCryptoFetch = 0;
+  }
+
+  publishCryptoEnabledState();
+}
+#endif // DISABLE_CRYPTO_FEATURE

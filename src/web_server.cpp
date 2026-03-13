@@ -10,6 +10,9 @@
 #ifndef DISABLE_WEATHER_FEATURE
 #include "weather.h"
 #endif
+#ifndef DISABLE_CRYPTO_FEATURE
+#include "crypto.h"
+#endif
 #include "chirp_library.h"
 #include "buzzer_utils.h"
 #ifdef ESP8266
@@ -785,9 +788,24 @@ void httpWebDirDef() {
     json += "    \"latitude\": "; addString(weatherConfig.latitude); json += ",\n";
     json += "    \"longitude\": "; addString(weatherConfig.longitude); json += ",\n";
     json += "    \"updateIntervalMinutes\": "; addString(weatherConfig.updateIntervalMinutes); json += ",\n";
+    json += "    \"displayIntervalMinutes\": "; addString(weatherConfig.displayIntervalMinutes); json += ",\n";
     json += "    \"temperatureUnit\": "; addString(weatherConfig.temperatureUnit); json += ",\n";
     json += "    \"brightness\": "; addString(weatherConfig.brightness); json += ",\n";
-    json += "    \"displayDurationSeconds\": "; addString(weatherConfig.displayDurationSeconds); json += "\n";
+    json += "    \"displayRepeatCount\": "; addString(weatherConfig.displayRepeatCount); json += "\n";
+    json += "  },\n";
+#endif
+
+#ifndef DISABLE_CRYPTO_FEATURE
+    // Crypto config
+    json += "  \"crypto\": {\n";
+    json += "    \"enabled\": "; addString(cryptoConfig.enabled); json += ",\n";
+    json += "    \"apiKey\": "; addString(cryptoConfig.apiKey); json += ",\n";
+    json += "    \"coins\": "; addString(cryptoConfig.coins); json += ",\n";
+    json += "    \"currency\": "; addString(cryptoConfig.currency); json += ",\n";
+    json += "    \"updateIntervalMinutes\": "; addString(cryptoConfig.updateIntervalMinutes); json += ",\n";
+    json += "    \"displayIntervalMinutes\": "; addString(cryptoConfig.displayIntervalMinutes); json += ",\n";
+    json += "    \"brightness\": "; addString(cryptoConfig.brightness); json += ",\n";
+    json += "    \"displayRepeatCount\": "; addString(cryptoConfig.displayRepeatCount); json += "\n";
     json += "  },\n";
 #endif
 
@@ -1075,6 +1093,9 @@ void httpWebDirDef() {
       if (!weather["updateIntervalMinutes"].isNull()) {
         strlcpy(weatherConfig.updateIntervalMinutes, weather["updateIntervalMinutes"], sizeof(weatherConfig.updateIntervalMinutes));
       }
+      if (!weather["displayIntervalMinutes"].isNull()) {
+        strlcpy(weatherConfig.displayIntervalMinutes, weather["displayIntervalMinutes"], sizeof(weatherConfig.displayIntervalMinutes));
+      }
       if (!weather["temperatureUnit"].isNull()) {
         strlcpy(weatherConfig.temperatureUnit, weather["temperatureUnit"], sizeof(weatherConfig.temperatureUnit));
       }
@@ -1082,13 +1103,50 @@ void httpWebDirDef() {
         strlcpy(weatherConfig.brightness, weather["brightness"], sizeof(weatherConfig.brightness));
         weatherBrightness = atoi(weatherConfig.brightness);
       }
-      if (!weather["displayDurationSeconds"].isNull()) {
-        strlcpy(weatherConfig.displayDurationSeconds, weather["displayDurationSeconds"], sizeof(weatherConfig.displayDurationSeconds));
+      if (!weather["displayRepeatCount"].isNull()) {
+        strlcpy(weatherConfig.displayRepeatCount, weather["displayRepeatCount"], sizeof(weatherConfig.displayRepeatCount));
       }
       saveWeatherConfiguration(weatherConfigFile, weatherConfig);
 
       // Reset fetch timer to trigger new fetch with new coordinates
       lastWeatherFetch = 0;
+    }
+#endif
+
+#ifndef DISABLE_CRYPTO_FEATURE
+    // Apply crypto config
+    if (!doc["crypto"].isNull()) {
+      JsonObject crypto = doc["crypto"];
+      if (!crypto["enabled"].isNull()) {
+        strlcpy(cryptoConfig.enabled, crypto["enabled"], sizeof(cryptoConfig.enabled));
+        cryptoEnabled = (strcmp(cryptoConfig.enabled, "on") == 0);
+      }
+      if (!crypto["apiKey"].isNull()) {
+        strlcpy(cryptoConfig.apiKey, crypto["apiKey"], sizeof(cryptoConfig.apiKey));
+      }
+      if (!crypto["coins"].isNull()) {
+        strlcpy(cryptoConfig.coins, crypto["coins"], sizeof(cryptoConfig.coins));
+      }
+      if (!crypto["currency"].isNull()) {
+        strlcpy(cryptoConfig.currency, crypto["currency"], sizeof(cryptoConfig.currency));
+      }
+      if (!crypto["updateIntervalMinutes"].isNull()) {
+        strlcpy(cryptoConfig.updateIntervalMinutes, crypto["updateIntervalMinutes"], sizeof(cryptoConfig.updateIntervalMinutes));
+      }
+      if (!crypto["displayIntervalMinutes"].isNull()) {
+        strlcpy(cryptoConfig.displayIntervalMinutes, crypto["displayIntervalMinutes"], sizeof(cryptoConfig.displayIntervalMinutes));
+      }
+      if (!crypto["brightness"].isNull()) {
+        strlcpy(cryptoConfig.brightness, crypto["brightness"], sizeof(cryptoConfig.brightness));
+        cryptoBrightness = atoi(cryptoConfig.brightness);
+      }
+      if (!crypto["displayRepeatCount"].isNull()) {
+        strlcpy(cryptoConfig.displayRepeatCount, crypto["displayRepeatCount"], sizeof(cryptoConfig.displayRepeatCount));
+      }
+      saveCryptoConfiguration(cryptoConfigFile, cryptoConfig);
+
+      // Reset fetch timer to trigger new fetch with new config
+      lastCryptoFetch = 0;
     }
 #endif
 
@@ -1753,19 +1811,21 @@ void httpWebDirDef() {
       const char* latitude = doc["latitude"] | "";
       const char* longitude = doc["longitude"] | "";
       const char* updateInterval = doc["updateIntervalMinutes"] | "30";
+      const char* displayInterval = doc["displayIntervalMinutes"] | "5";
       const char* tempUnit = doc["temperatureUnit"] | "C";
       const char* brightness = doc["brightness"] | "5";
-      const char* displayDuration = doc["displayDurationSeconds"] | "10";
+      const char* displayRepeat = doc["displayRepeatCount"] | "2";
 
       // Update config struct
       strlcpy(weatherConfig.enabled, enabled, STDSIZE);
       strlcpy(weatherConfig.location, location, WEATHER_LOCATION_SIZE);
       strlcpy(weatherConfig.latitude, latitude, WEATHER_COORD_SIZE);
       strlcpy(weatherConfig.longitude, longitude, WEATHER_COORD_SIZE);
-      strlcpy(weatherConfig.updateIntervalMinutes, updateInterval, STDSIZE);
+      strlcpy(weatherConfig.updateIntervalMinutes, updateInterval, REP_SIZE);
+      strlcpy(weatherConfig.displayIntervalMinutes, displayInterval, REP_SIZE);
       strlcpy(weatherConfig.temperatureUnit, tempUnit, STDSIZE);
       strlcpy(weatherConfig.brightness, brightness, BRI_SIZE);
-      strlcpy(weatherConfig.displayDurationSeconds, displayDuration, STDSIZE);
+      strlcpy(weatherConfig.displayRepeatCount, displayRepeat, REP_SIZE);
 
       // Save to file
       saveWeatherConfiguration(weatherConfigFile, weatherConfig);
@@ -1799,6 +1859,109 @@ void httpWebDirDef() {
 
     // Return current status immediately (data will update on next loop iteration)
     String json = getWeatherStatusJson();
+    serverHttp.send(200, "application/json", json);
+  });
+  #endif
+
+  #ifndef DISABLE_CRYPTO_FEATURE
+  // GET /api/crypto/status - Return current crypto status and config as JSON
+  serverHttp.on("/api/crypto/status", HTTP_GET, []() {
+    if (!serverHttp.authenticate(web_username, web_password)) {
+      return serverHttp.requestAuthentication();
+    }
+    String json = getCryptoStatusJson();
+    serverHttp.send(200, "application/json", json);
+  });
+
+  // POST /api/crypto/save - Save crypto configuration
+  serverHttp.on("/api/crypto/save", HTTP_POST, []() {
+    if (!serverHttp.authenticate(web_username, web_password)) {
+      return serverHttp.requestAuthentication();
+    }
+
+    String body = serverHttp.arg("plain");
+    if (body.length() == 0) {
+      serverHttp.send(400, "application/json", "{\"error\":\"Empty body\"}");
+      return;
+    }
+
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, body);
+    if (error) {
+      serverHttp.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+      return;
+    }
+
+    // Validate coin count (max MAX_CRYPTO_COINS)
+    const char* coinsStr = doc["coins"] | "";
+    if (strlen(coinsStr) > 0) {
+      char coinsCopy[CRYPTO_COINS_SIZE];
+      strlcpy(coinsCopy, coinsStr, sizeof(coinsCopy));
+      int coinCount = 1;
+      for (int i = 0; coinsCopy[i]; i++) {
+        if (coinsCopy[i] == ',') coinCount++;
+      }
+      if (coinCount > MAX_CRYPTO_COINS) {
+        serverHttp.send(400, "application/json", "{\"error\":\"Too many coins — maximum 10 allowed\"}");
+        return;
+      }
+    }
+
+    // Extract update interval (any positive value accepted — validated on client side)
+    const char* interval = doc["updateIntervalMinutes"] | "30";
+
+    // Validate brightness
+    int brightness = doc["brightness"] | 5;
+    if (brightness < 0 || brightness > 15) {
+      serverHttp.send(400, "application/json", "{\"error\":\"Brightness must be 0-15\"}");
+      return;
+    }
+
+    // Update config struct
+    const char* enabled = doc["enabled"] | "off";
+    const char* apiKey = doc["apiKey"] | "";
+    const char* currency = doc["currency"] | "USD";
+    const char* displayInterval = doc["displayIntervalMinutes"] | "5";
+    const char* displayRepeat = doc["displayRepeatCount"] | "2";
+
+    strlcpy(cryptoConfig.enabled, enabled, sizeof(cryptoConfig.enabled));
+    strlcpy(cryptoConfig.apiKey, apiKey, sizeof(cryptoConfig.apiKey));
+    strlcpy(cryptoConfig.coins, coinsStr, sizeof(cryptoConfig.coins));
+    strlcpy(cryptoConfig.currency, currency, sizeof(cryptoConfig.currency));
+    strlcpy(cryptoConfig.updateIntervalMinutes, interval, sizeof(cryptoConfig.updateIntervalMinutes));
+    strlcpy(cryptoConfig.displayIntervalMinutes, displayInterval, sizeof(cryptoConfig.displayIntervalMinutes));
+    strlcpy(cryptoConfig.brightness, String(brightness).c_str(), sizeof(cryptoConfig.brightness));
+    strlcpy(cryptoConfig.displayRepeatCount, displayRepeat, sizeof(cryptoConfig.displayRepeatCount));
+
+    // Save to file
+    saveCryptoConfiguration(cryptoConfigFile, cryptoConfig);
+
+    // Update global state variables
+    cryptoEnabled = (strcmp(cryptoConfig.enabled, "on") == 0);
+    cryptoBrightness = atoi(cryptoConfig.brightness);
+
+    // Reset fetch timer to trigger new fetch with new config
+    lastCryptoFetch = 0;
+
+    PRINT("Crypto config saved - Enabled: ", cryptoConfig.enabled);
+    PRINTS("\n");
+
+    serverHttp.send(200, "application/json", "{\"status\":\"saved\"}");
+  });
+
+  // POST /api/crypto/refresh - Trigger immediate crypto data refresh
+  serverHttp.on("/api/crypto/refresh", HTTP_POST, []() {
+    if (!serverHttp.authenticate(web_username, web_password)) {
+      return serverHttp.requestAuthentication();
+    }
+
+    Serial.println(F("Crypto refresh requested from web UI"));
+
+    // Set flag for main loop to handle (avoids stack overflow)
+    cryptoRefreshRequested = true;
+
+    // Return current status immediately (data will update on next loop iteration)
+    String json = getCryptoStatusJson();
     serverHttp.send(200, "application/json", json);
   });
   #endif

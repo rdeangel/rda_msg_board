@@ -298,4 +298,19 @@ extern int weatherCode;                  // Weather condition code from API
 extern bool weatherRefreshRequested;     // Flag to request refresh from main loop
 #endif // DISABLE_WEATHER_FEATURE
 
+#ifndef DISABLE_CRYPTO_FEATURE
+// Crypto Price Ticker Configuration
+extern cryptoConfigObj cryptoConfig;
+extern const char *cryptoConfigFile;
+
+// Crypto State Variables
+extern bool cryptoEnabled;               // Whether crypto feature is enabled
+extern int cryptoBrightness;             // Brightness for crypto display
+extern unsigned long lastCryptoFetch;    // Last time crypto data was fetched
+extern unsigned long cryptoDisplayStart; // When crypto display started
+extern char cryptoPriceBuffer[CRYPTO_PRICE_BUF_SIZE]; // Full formatted price string
+extern bool cryptoDataValid;             // Whether we have valid crypto data
+extern bool cryptoRefreshRequested;      // Flag to request refresh from main loop
+#endif // DISABLE_CRYPTO_FEATURE
+
 #endif // GLOBALS_H

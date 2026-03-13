@@ -1082,10 +1082,11 @@ void loadWeatherConfiguration(const char *configFile, weatherConfigObj &config) 
   strlcpy(config.location, doc["location"] | "", WEATHER_LOCATION_SIZE);
   strlcpy(config.latitude, doc["latitude"] | "", WEATHER_COORD_SIZE);
   strlcpy(config.longitude, doc["longitude"] | "", WEATHER_COORD_SIZE);
-  strlcpy(config.updateIntervalMinutes, doc["updateIntervalMinutes"] | "30", STDSIZE);
+  strlcpy(config.updateIntervalMinutes, doc["updateIntervalMinutes"] | "30", REP_SIZE);
+  strlcpy(config.displayIntervalMinutes, doc["displayIntervalMinutes"] | "5", REP_SIZE);
   strlcpy(config.temperatureUnit, doc["temperatureUnit"] | "C", STDSIZE);
   strlcpy(config.brightness, doc["brightness"] | "5", BRI_SIZE);
-  strlcpy(config.displayDurationSeconds, doc["displayDurationSeconds"] | "10", STDSIZE);
+  strlcpy(config.displayRepeatCount, doc["displayRepeatCount"] | "2", REP_SIZE);
 
 #if DEBUG == 1
   Serial.println(F("\n=== Weather Configuration Loaded ==="));
@@ -1096,7 +1097,7 @@ void loadWeatherConfiguration(const char *configFile, weatherConfigObj &config) 
   Serial.print(F("Update Interval: ")); Serial.println(config.updateIntervalMinutes);
   Serial.print(F("Temperature Unit: ")); Serial.println(config.temperatureUnit);
   Serial.print(F("Brightness: ")); Serial.println(config.brightness);
-  Serial.print(F("Display Duration: ")); Serial.println(config.displayDurationSeconds);
+  Serial.print(F("Display Repeat Count: ")); Serial.println(config.displayRepeatCount);
   Serial.println(F("====================================\n"));
 #endif
 }
@@ -1110,9 +1111,10 @@ void saveWeatherConfiguration(const char *configFile, const weatherConfigObj &co
   doc["latitude"] = config.latitude;
   doc["longitude"] = config.longitude;
   doc["updateIntervalMinutes"] = config.updateIntervalMinutes;
+  doc["displayIntervalMinutes"] = config.displayIntervalMinutes;
   doc["temperatureUnit"] = config.temperatureUnit;
   doc["brightness"] = config.brightness;
-  doc["displayDurationSeconds"] = config.displayDurationSeconds;
+  doc["displayRepeatCount"] = config.displayRepeatCount;
 
   File file = LittleFS.open(configFile, "w");
   if (!file) {
@@ -1148,10 +1150,11 @@ void initWeatherStoreConfig() {
     strlcpy(weatherConfig.location, "", WEATHER_LOCATION_SIZE);
     strlcpy(weatherConfig.latitude, "", WEATHER_COORD_SIZE);
     strlcpy(weatherConfig.longitude, "", WEATHER_COORD_SIZE);
-    strlcpy(weatherConfig.updateIntervalMinutes, "30", STDSIZE);
+    strlcpy(weatherConfig.updateIntervalMinutes, "30", REP_SIZE);
+    strlcpy(weatherConfig.displayIntervalMinutes, "5", REP_SIZE);
     strlcpy(weatherConfig.temperatureUnit, "C", STDSIZE);
     strlcpy(weatherConfig.brightness, "5", BRI_SIZE);
-    strlcpy(weatherConfig.displayDurationSeconds, "10", STDSIZE);
+    strlcpy(weatherConfig.displayRepeatCount, "2", REP_SIZE);
 
     // Save defaults to file
     saveWeatherConfiguration(configFile, weatherConfig);
@@ -1174,3 +1177,111 @@ void initWeatherStoreConfig() {
   Serial.println(weatherConfig.longitude);
 }
 #endif // DISABLE_WEATHER_FEATURE
+
+#ifndef DISABLE_CRYPTO_FEATURE
+// ============================================================================
+// Crypto Price Ticker Configuration
+// ============================================================================
+
+void loadCryptoConfiguration(const char *configFile, cryptoConfigObj &config) {
+  File file = LittleFS.open(configFile, "r");
+  if (!file) {
+    Serial.println(F("Failed to open crypto config file for reading"));
+    return;
+  }
+
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, file);
+  file.close();
+
+  if (error) {
+    Serial.print(F("Failed to parse crypto config: "));
+    Serial.println(error.c_str());
+    return;
+  }
+
+  strlcpy(config.enabled, doc["enabled"] | "off", FLAG_SIZE);
+  strlcpy(config.apiKey, doc["apiKey"] | "", CRYPTO_API_KEY_SIZE);
+  strlcpy(config.coins, doc["coins"] | "btc-bitcoin,eth-ethereum", CRYPTO_COINS_SIZE);
+  strlcpy(config.currency, doc["currency"] | "USD", CRYPTO_CURRENCY_SIZE);
+  strlcpy(config.updateIntervalMinutes, doc["updateIntervalMinutes"] | "30", REP_SIZE);
+  strlcpy(config.displayIntervalMinutes, doc["displayIntervalMinutes"] | "5", REP_SIZE);
+  strlcpy(config.displayRepeatCount, doc["displayRepeatCount"] | "2", REP_SIZE);
+  strlcpy(config.brightness, doc["brightness"] | "5", BRI_SIZE);
+
+#if DEBUG == 1
+  Serial.println(F("\n=== Crypto Configuration Loaded ==="));
+  Serial.print(F("Enabled: ")); Serial.println(config.enabled);
+  Serial.print(F("Coins: ")); Serial.println(config.coins);
+  Serial.print(F("Currency: ")); Serial.println(config.currency);
+  Serial.print(F("Update Interval: ")); Serial.println(config.updateIntervalMinutes);
+  Serial.print(F("Brightness: ")); Serial.println(config.brightness);
+  Serial.println(F("====================================\n"));
+#endif
+}
+
+void saveCryptoConfiguration(const char *configFile, const cryptoConfigObj &config) {
+  JsonDocument doc;
+
+  doc["enabled"] = config.enabled;
+  doc["apiKey"] = config.apiKey;
+  doc["coins"] = config.coins;
+  doc["currency"] = config.currency;
+  doc["updateIntervalMinutes"] = config.updateIntervalMinutes;
+  doc["displayIntervalMinutes"] = config.displayIntervalMinutes;
+  doc["displayRepeatCount"] = config.displayRepeatCount;
+  doc["brightness"] = config.brightness;
+
+  File file = LittleFS.open(configFile, "w");
+  if (!file) {
+    Serial.println(F("Failed to open crypto config file for writing"));
+    return;
+  }
+
+  if (serializeJson(doc, file) == 0) {
+    Serial.println(F("Failed to write crypto config"));
+  }
+
+  file.close();
+
+#if DEBUG == 1
+  Serial.println(F("\n=== Crypto Configuration Saved ==="));
+  Serial.print(F("Enabled: ")); Serial.println(config.enabled);
+  Serial.print(F("Coins: ")); Serial.println(config.coins);
+  Serial.println(F("===================================\n"));
+#endif
+}
+
+void initCryptoStoreConfig() {
+  const char *configFile = "/crypto_config.json";
+
+  if (!LittleFS.exists(configFile)) {
+    Serial.println(F("Crypto config file not found, creating defaults"));
+
+    strlcpy(cryptoConfig.enabled, "off", FLAG_SIZE);
+    strlcpy(cryptoConfig.apiKey, "", CRYPTO_API_KEY_SIZE);
+    // Default: Bitcoin and Ethereum only — add more via the web UI (up to 10 total)
+    strlcpy(cryptoConfig.coins, "btc-bitcoin,eth-ethereum", CRYPTO_COINS_SIZE);
+    strlcpy(cryptoConfig.currency, "USD", CRYPTO_CURRENCY_SIZE);
+    strlcpy(cryptoConfig.updateIntervalMinutes, "30", REP_SIZE);
+    strlcpy(cryptoConfig.displayIntervalMinutes, "5", REP_SIZE);
+    strlcpy(cryptoConfig.displayRepeatCount, "2", REP_SIZE);
+    strlcpy(cryptoConfig.brightness, "5", BRI_SIZE);
+
+    saveCryptoConfiguration(configFile, cryptoConfig);
+  } else {
+    loadCryptoConfiguration(configFile, cryptoConfig);
+  }
+
+  // Apply configuration to runtime variables
+  cryptoEnabled = (strcmp(cryptoConfig.enabled, "on") == 0);
+  cryptoBrightness = atoi(cryptoConfig.brightness);
+
+  Serial.print(F("Crypto loaded - Enabled: "));
+  Serial.print(cryptoConfig.enabled);
+  Serial.print(F(", Coins: "));
+  Serial.print(cryptoConfig.coins);
+  Serial.print(F(", Currency: "));
+  Serial.println(cryptoConfig.currency);
+}
+#endif // DISABLE_CRYPTO_FEATURE
