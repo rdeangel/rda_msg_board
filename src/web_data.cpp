@@ -112,6 +112,7 @@ void setClockPageVars() {
   clockPageVars += "<randomizetransition>" + String(clockConfig.randomizeTransition) + "</randomizetransition>";
   clockPageVars += "<resyncinterval>" + String(clockConfig.resyncIntervalHours) + "</resyncinterval>";
   clockPageVars += "<dateformat>" + String(clockConfig.dateFormat) + "</dateformat>";
+  clockPageVars += "<clockdisplayseconds>" + String(clockConfig.clockDisplaySeconds) + "</clockdisplayseconds>";
   clockPageVars += "<datealternateseconds>" + String(clockConfig.dateAlternateSeconds) + "</datealternateseconds>";
   clockPageVars += "<customdateformat>" + String(clockConfig.customDateFormat) + "</customdateformat>";
   clockPageVars += "<clockface>" + String(clockConfig.clockFace) + "</clockface>";

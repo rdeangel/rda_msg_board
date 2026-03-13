@@ -681,8 +681,10 @@ function openClockModal() {
         document.getElementById('DATEFORMAT').value = getVal('dateformat', 'TIME_ONLY');
         document.getElementById('CLOCKFACE').value = getVal('clockface', 'DEFAULT');
         document.getElementById('DATEALTERNATE').checked = (getVal('datealternate', 'off') === 'on');
-        document.getElementById('DATEALTERNATESECONDS').value = getVal('datealternateseconds', '10');
-        document.getElementById('dateAltVal').innerText = getVal('datealternateseconds', '10');
+        document.getElementById('CLOCKDISPLAYSECONDS').value = getVal('clockdisplayseconds', '30');
+        document.getElementById('clockDispVal').innerText = getVal('clockdisplayseconds', '30');
+        document.getElementById('DATEALTERNATESECONDS').value = getVal('datealternateseconds', '5');
+        document.getElementById('dateAltVal').innerText = getVal('datealternateseconds', '5');
         document.getElementById('CUSTOMDATEFORMAT').value = getVal('customdateformat', '');
         var ampmVal = getVal('clockampm', 'off');
         document.getElementById('CLOCKAMPM').value = ampmVal;
@@ -2266,15 +2268,21 @@ window.onload = function() {
         <input type="hidden" id="DATEALTERNATEHIDDEN" name="DateAlternate" value="off">
       </div>
 
-      <!-- Alternate Interval (shown when dateAlternate=on) -->
+      <!-- Alternation durations (shown when dateAlternate=on) -->
       <div id="DATEALTERNATECONTAINER" style="display: none;">
-        <label for="DATEALTERNATESECONDS">Alternate Interval: <span id="dateAltVal" class="val-label">10</span>s</label>
+        <label for="CLOCKDISPLAYSECONDS">Clock Duration: <span id="clockDispVal" class="val-label">30</span>s</label>
         <div class="slider-row">
-          <input type="range" id="DATEALTERNATESECONDS" name="DateAlternateSeconds" min="1" max="60" step="1" value="10"
-                 oninput="document.getElementById('dateAltVal').innerText=this.value" style="flex: 1;">
-          <span class="val-label" id="dateAltVal" style="min-width: 40px; text-align: right;">10</span>
+          <input type="range" id="CLOCKDISPLAYSECONDS" name="ClockDisplaySeconds" min="5" max="300" step="5" value="30"
+                 oninput="document.getElementById('clockDispVal').innerText=this.value" style="flex: 1;">
+          <span style="min-width: 40px; text-align: right; font-size: 0.9rem; color: var(--subtext);">s</span>
         </div>
-        <p style="font-size: 0.85rem; color: var(--subtext); margin: -5px 0 15px 0;">
+        <label for="DATEALTERNATESECONDS" style="margin-top: 10px;">Date/Weekday Duration: <span id="dateAltVal" class="val-label">5</span>s</label>
+        <div class="slider-row">
+          <input type="range" id="DATEALTERNATESECONDS" name="DateAlternateSeconds" min="1" max="60" step="1" value="5"
+                 oninput="document.getElementById('dateAltVal').innerText=this.value" style="flex: 1;">
+          <span style="min-width: 40px; text-align: right; font-size: 0.9rem; color: var(--subtext);">s</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--subtext); margin: 4px 0 15px 0;">
           Rotates: time &rarr; day of week (Matrix Light only) &rarr; date &rarr; repeat
         </p>
       </div>

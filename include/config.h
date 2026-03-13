@@ -233,7 +233,8 @@ struct clockConfigObj {
   char resyncIntervalHours[REP_SIZE]; // "6" (hours)
   char dateFormat[TIMER_MODE_SIZE];   // "TIME_ONLY", "TIME_SECONDS" etc. (max 14 chars)
   char dateAlternate[FLAG_SIZE];      // "on" / "off" — rotate through date displays
-  char dateAlternateSeconds[REP_SIZE]; // "5" (seconds per step)
+  char clockDisplaySeconds[REP_SIZE]; // "30" (seconds to show time before alternating)
+  char dateAlternateSeconds[REP_SIZE]; // "5" (seconds each date/weekday step shows)
   char customDateFormat[STDSIZE];     // Custom strftime format string (user text, keep large)
   char clockFace[CLOCK_FACE_SIZE];    // "DEFAULT", "MATRIX_LIGHT", "MATRIX_LIGHT_6", "MATRIX_CHUNKY_6", etc.
   char clockAmPm[FLAG_SIZE];          // "on" / "off" — 12-hour AM/PM mode

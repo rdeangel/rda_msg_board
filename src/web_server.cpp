@@ -726,6 +726,7 @@ void httpWebDirDef() {
     json += "    \"resyncIntervalHours\": "; addString(clockConfig.resyncIntervalHours); json += ",\n";
     json += "    \"clockFace\": "; addString(clockConfig.clockFace); json += ",\n";
     json += "    \"dateAlternate\": "; addString(clockConfig.dateAlternate); json += ",\n";
+    json += "    \"clockDisplaySeconds\": "; addString(clockConfig.clockDisplaySeconds); json += ",\n";
     json += "    \"dateAlternateSeconds\": "; addString(clockConfig.dateAlternateSeconds); json += ",\n";
     json += "    \"customDateFormat\": "; addString(clockConfig.customDateFormat); json += ",\n";
     json += "    \"clockAmPm\": "; addString(clockConfig.clockAmPm); json += "\n";
@@ -966,6 +967,7 @@ void httpWebDirDef() {
       if (!clock["resyncIntervalHours"].isNull()) strlcpy(clockConfig.resyncIntervalHours, clock["resyncIntervalHours"], sizeof(clockConfig.resyncIntervalHours));
       if (!clock["clockFace"].isNull()) strlcpy(clockConfig.clockFace, clock["clockFace"], sizeof(clockConfig.clockFace));
       if (!clock["dateAlternate"].isNull()) strlcpy(clockConfig.dateAlternate, clock["dateAlternate"], sizeof(clockConfig.dateAlternate));
+      if (!clock["clockDisplaySeconds"].isNull()) strlcpy(clockConfig.clockDisplaySeconds, clock["clockDisplaySeconds"], sizeof(clockConfig.clockDisplaySeconds));
       if (!clock["dateAlternateSeconds"].isNull()) strlcpy(clockConfig.dateAlternateSeconds, clock["dateAlternateSeconds"], sizeof(clockConfig.dateAlternateSeconds));
       if (!clock["customDateFormat"].isNull()) strlcpy(clockConfig.customDateFormat, clock["customDateFormat"], sizeof(clockConfig.customDateFormat));
       if (!clock["clockAmPm"].isNull()) strlcpy(clockConfig.clockAmPm, clock["clockAmPm"], sizeof(clockConfig.clockAmPm));
@@ -1258,6 +1260,8 @@ void httpWebDirDef() {
         argValue.toCharArray(clockConfig.dateFormat, sizeof(clockConfig.dateFormat));
       } else if (argName == "DateAlternate") {
         argValue.toCharArray(clockConfig.dateAlternate, sizeof(clockConfig.dateAlternate));
+      } else if (argName == "ClockDisplaySeconds") {
+        argValue.toCharArray(clockConfig.clockDisplaySeconds, sizeof(clockConfig.clockDisplaySeconds));
       } else if (argName == "DateAlternateSeconds") {
         argValue.toCharArray(clockConfig.dateAlternateSeconds, sizeof(clockConfig.dateAlternateSeconds));
       } else if (argName == "ClockAmPm") {

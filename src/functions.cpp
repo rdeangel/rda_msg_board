@@ -1326,7 +1326,10 @@ bool updateDateAlternate() {
     return false;
   }
 
-  unsigned long interval = (unsigned long)atoi(clockConfig.dateAlternateSeconds) * 1000UL;
+  // State 0 = time display; states 1/2 = weekday/date — each uses its own duration
+  unsigned long interval = (clockAlternateState == 0)
+    ? (unsigned long)atoi(clockConfig.clockDisplaySeconds) * 1000UL
+    : (unsigned long)atoi(clockConfig.dateAlternateSeconds) * 1000UL;
   if (millis() - lastDateAlternate >= interval) {
     lastDateAlternate = millis();
 

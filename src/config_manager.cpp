@@ -396,6 +396,8 @@ void loadClockConfiguration(const char *configFile, clockConfigObj &config) {
     strlcpy(config.dateFormat, doc["dateFormat"], sizeof(config.dateFormat));
   if (!doc["dateAlternate"].isNull())
     strlcpy(config.dateAlternate, doc["dateAlternate"], sizeof(config.dateAlternate));
+  if (!doc["clockDisplaySeconds"].isNull())
+    strlcpy(config.clockDisplaySeconds, doc["clockDisplaySeconds"], sizeof(config.clockDisplaySeconds));
   if (!doc["dateAlternateSeconds"].isNull())
     strlcpy(config.dateAlternateSeconds, doc["dateAlternateSeconds"], sizeof(config.dateAlternateSeconds));
   if (!doc["customDateFormat"].isNull())
@@ -434,6 +436,7 @@ void saveClockConfiguration(const char *configFile, const clockConfigObj &config
   doc["transitionSpeed"] = config.transitionSpeed;
   doc["dateFormat"] = config.dateFormat;
   doc["dateAlternate"] = config.dateAlternate;
+  doc["clockDisplaySeconds"] = config.clockDisplaySeconds;
   doc["dateAlternateSeconds"] = config.dateAlternateSeconds;
   doc["customDateFormat"] = config.customDateFormat;
   doc["clockFace"] = config.clockFace;
@@ -477,6 +480,11 @@ void initClockStoreConfig() {
     #else
       strlcpy(clockConfig.dateFormat, "TIME_ONLY", sizeof(clockConfig.dateFormat));
     #endif
+    saveAtStart = true;
+  }
+
+  if (clockConfig.clockDisplaySeconds[0] == '\0') {
+    strlcpy(clockConfig.clockDisplaySeconds, "30", sizeof(clockConfig.clockDisplaySeconds));
     saveAtStart = true;
   }
 
