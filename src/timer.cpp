@@ -2,6 +2,7 @@
 #include "timer.h"
 #include "globals.h"
 #include "functions.h"
+#include "ClockFixedFont.h"
 #include "config_manager.h"
 #include "buzzer_utils.h"
 #include "chirp_library.h"
@@ -278,8 +279,8 @@ void displayTimer(bool withAnimation) {
       return;
   }
 
-  // Use standard font
-  P.setFont(nullptr);
+  // Use fixed-width clock font so digit '1' does not shift the centred display
+  P.setFont((MD_MAX72XX::fontType_t*)ClockFixedFont);
   
   // Apply timer brightness
   P.setIntensity(getEffectiveBrightness(timerBrightness));

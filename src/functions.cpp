@@ -30,6 +30,8 @@
 // 8-series fonts (full 8-row height — best for 8-module clocks)
 #include "MatrixLight8_font.h"
 #include "MatrixLight8X_font.h"
+// Default font variant with '1' padded to fixed width — used only for clock/timer
+#include "ClockFixedFont.h"
 
 // Note: Buzzer and UTF-8 functions moved to buzzer_utils.cpp and utf8_utils.cpp
 
@@ -724,8 +726,14 @@ void displayClock(bool withAnimation) {
   }
   #endif
 
-  // Select clock font — custom bitmap fonts use getFontForFace(), DEFAULT uses built-in Parola font.
-  P.setFont(getFontForFace(clockConfig.clockFace));
+  // Select clock font. Custom bitmap fonts use getFontForFace(). For the DEFAULT
+  // Parola font, use ClockFixedFont instead of nullptr so that digit '1' is
+  // rendered at a fixed width (same as all other digits), preventing the
+  // centred display from shifting when a '1' appears or disappears.
+  {
+    MD_MAX72XX::fontType_t* f = getFontForFace(clockConfig.clockFace);
+    P.setFont(f != nullptr ? f : (MD_MAX72XX::fontType_t*)ClockFixedFont);
+  }
 
   static char timeString[DATE_FORMAT_SIZE]; // Increased from [6]
 
