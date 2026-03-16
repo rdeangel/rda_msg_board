@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- releases -->
 
+## [v1.4.1] - 2026-03-16
+
+### ✨ New Features
+- feat(ota): freeze display during firmware updates - [4ce30b8](https://github.com/rdeangel/rda_msg_board/commit/4ce30b8)
+
 ## [v1.4.0] - 2026-03-16
 
 ### ✨ New Features
