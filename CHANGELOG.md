@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- releases -->
 
+## [v1.4.0] - 2026-03-16
+
+### ✨ New Features
+- feat(esp32): implement non-blocking operations via FreeRTOS tasks - [c63cd7d](https://github.com/rdeangel/rda_msg_board/commit/c63cd7d)
+- feat(crypto): add proper currency symbols for GBP, EUR, and JPY - [9c9d9d0](https://github.com/rdeangel/rda_msg_board/commit/9c9d9d0)
+- feat(clock): add separate clock display duration for date alternation - [60fd546](https://github.com/rdeangel/rda_msg_board/commit/60fd546)
+- feat(crypto): add CoinPaprika crypto price ticker for ESP32 - [12de8bc](https://github.com/rdeangel/rda_msg_board/commit/12de8bc)
+- feat: add force repetitions feature to force continue repetition of messages untill the last repeat. - [16cbf02](https://github.com/rdeangel/rda_msg_board/commit/16cbf02)
+
+### 🐛 Bug Fixes
+- fix(font): add fixed-width clock font to prevent '1' shift with default font. - [2cd23f9](https://github.com/rdeangel/rda_msg_board/commit/2cd23f9)
+- fix(font): pad digit '1' to 3 columns in 6X and 8X fonts - [a5264e2](https://github.com/rdeangel/rda_msg_board/commit/a5264e2)
+
+### 📚 Documentation
+- docs: update documentation for v1.4.0 features - [28f1880](https://github.com/rdeangel/rda_msg_board/commit/28f1880)
+
 ## [v1.3.1] - 2026-03-09
 
 ### 🐛 Bug Fixes
