@@ -36,7 +36,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.7
 
       - name: Extract version from platformio.ini
         id: version
@@ -48,7 +48,7 @@ jobs:
           echo "Extracted: $PROJECT_NAME $VERSION"
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.1.1
         with:
           python-version: '3.11'
 
@@ -67,7 +67,7 @@ jobs:
              artifacts/${{ steps.version.outputs.PROJECT_NAME }}_${{ matrix.environment }}_${{ steps.version.outputs.VERSION }}.bin
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.3.6
         with:
           name: firmware-${{ matrix.environment }}
           path: artifacts/*.bin
@@ -79,7 +79,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.7
         with:
           fetch-depth: 0  # Full history to read tag messages
 
@@ -103,7 +103,7 @@ jobs:
           cat /tmp/release_notes.md
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.1.7
         with:
           path: artifacts
           merge-multiple: true
@@ -112,7 +112,7 @@ jobs:
         run: ls -la artifacts/
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.0.8
         with:
           files: artifacts/*.bin
           body_path: /tmp/release_notes.md

@@ -280,6 +280,8 @@ void displayText() {
 void scrollTextParola() {
   static char *p;
 
+  if (otaInProgress) return;
+
   // Only process messages when in MESSAGE mode - let clock/timer/alarm exit first
   if (clockEnabled && currentDisplayMode != MODE_MESSAGE) {
     return;
@@ -811,6 +813,8 @@ void updateClockDisplay() {
 
 // Main state machine for switching between message, clock, and timer modes
 void updateDisplayMode() {
+  if (otaInProgress) return;
+
   // Priority: Timer (when running) > Clock (when enabled) > Message
 
   // Scroll repeat counters — reset when entering the respective mode from MODE_CLOCK

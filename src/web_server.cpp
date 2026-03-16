@@ -2092,6 +2092,14 @@ void httpWebDirDef() {
         HTTPUpload &upload = serverHttp.upload();
         if (upload.status == UPLOAD_FILE_START) {
           Serial.setDebugOutput(true);
+          otaInProgress = true;  // Freeze display — must be set before touching hardware
+#ifdef ESP32
+          delay(10);  // Let Core 1 display loop finish its current iteration
+#endif
+          P.setFont(nullptr);
+          P.displayText("Flash", PA_CENTER, 0, 0, PA_PRINT, PA_PRINT);
+          P.displayReset();
+          P.displayAnimate();  // Render once — stays until reboot
 #ifdef ESP8266
           WiFiUDP::stopAll();
 #endif
@@ -2104,6 +2112,7 @@ void httpWebDirDef() {
           if (!Update.begin(UPDATE_SIZE_UNKNOWN)) { // ESP32 uses UPDATE_SIZE_UNKNOWN
 #endif
             Update.printError(Serial);
+            otaInProgress = false;
           }
         } else if (upload.status == UPLOAD_FILE_WRITE) {
           if (Update.write(upload.buf, upload.currentSize) !=
@@ -2120,6 +2129,7 @@ void httpWebDirDef() {
             ESP.restart();
           } else {
             Update.printError(Serial);
+            otaInProgress = false;
           }
           Serial.setDebugOutput(false);
         }

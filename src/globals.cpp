@@ -323,3 +323,6 @@ volatile bool cryptoDataReady = false;
 volatile bool cryptoFetching = false;
 #endif
 #endif // DISABLE_CRYPTO_FEATURE
+
+// OTA Update State
+bool otaInProgress = false;

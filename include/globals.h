@@ -327,4 +327,7 @@ extern volatile bool cryptoFetching;     // Task currently fetching
 #endif
 #endif // DISABLE_CRYPTO_FEATURE
 
+// OTA Update State
+extern bool otaInProgress;  // Set at UPLOAD_FILE_START to freeze the display during firmware update
+
 #endif // GLOBALS_H
