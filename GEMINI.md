@@ -3,7 +3,7 @@
 ## Project Description
 ESP8266/ESP32-based Message Board firmware (`rda_msg_board`). Controls MAX7219 LED matrices to display scrolling messages. Features a web interface, HTTP REST API, MQTT support, clock with multiple font faces, recurrent alarms, sleep mode, and Home Assistant MQTT Discovery integration. Originally developed for Arduino IDE, migrated to PlatformIO.
 
-**Current version**: v1.2.0
+**Current version**: v1.4.0
 
 ## Architecture Overview
 
@@ -15,7 +15,7 @@ ESP8266/ESP32-based Message Board firmware (`rda_msg_board`). Controls MAX7219 L
 5. **Clock Settings** (`/clock.config`) - NTP server, POSIX timezone, brightness, transition effect/speed/delay, randomize, resync interval, date format, date alternation (enable + seconds), custom date format, clock face, AM/PM mode
 6. **Timer Settings** (`/timer.config`) - Timer vs stopwatch mode, duration, brightness, buzzer, auto-repeat, alert chirp
 7. **Sleep Mode** (`/sleep_mode.config`) - Scheduled display on/off, mute-only mode, weekend override times
-8. **Alarm** (`/alarm.config`) - Recurrent alarm: enable, interval, chirp name, disable-weekends
+8. **Alarm** (`/alarm.config`) - Recurrent alarm: enable, interval, chirp name, disable-weekends, display message
 
 **Deferred loading (ESP8266 only)**: Only defaults + general configs load before `wm.autoConnect()` to preserve heap for the WiFiManager captive portal page. All other configs load after WiFiManager completes.
 
@@ -27,7 +27,7 @@ ESP8266/ESP32-based Message Board firmware (`rda_msg_board`). Controls MAX7219 L
 - `clockConfig`: enabled, ntpServer, tzString, brightness, transitionDelayMs, transitionEffect, randomizeTransition, transitionSpeed, resyncIntervalHours, dateFormat, dateAlternate, dateAlternateSeconds, customDateFormat, **clockFace**, **clockAmPm**
 - `timerConfig`: enabled, mode, durationSeconds, brightness, alertBuzzer, alertChirp, autoRepeat
 - `sleepModeConfig`: enabled, onTime, offTime, muteOnly, weekendEnabled, weekendOnTime, weekendOffTime
-- `recurrentAlarmConfig`: enabled, interval, chirpName, disableWeekends
+- `recurrentAlarmConfig`: enabled, interval, chirpName, disableWeekends, displayMessage
 
 ### Core Components
 - **WiFiManager**: Captive portal for initial WiFi setup (AP: `RDA-MSG-XXXXXX`, Password: `wifi-setup`)
@@ -38,6 +38,17 @@ ESP8266/ESP32-based Message Board firmware (`rda_msg_board`). Controls MAX7219 L
 - **Fonts**: Built-in Parola font (`nullptr`), `MatrixLight8Font` (8px, PROGMEM), `MatrixLight6Font` (6px, PROGMEM)
 - **LittleFS**: Flash filesystem — compatible on both platforms
 - **EasyButton**: Optional FLASH button (ESP8266 only, disabled by default via `ENABLE_FLASH_BUTTON=0`)
+
+### ESP32 FreeRTOS Task Architecture
+
+On ESP32, CPU-intensive operations run on background FreeRTOS tasks to prevent blocking the display loop on Core 1:
+
+- **Buzzer Task** (Core 0, 3KB stack): Plays chirp patterns via queue (1 item queue). `playChirpByName()` posts non-blocking requests; task consumes and plays.
+- **HTTP Task** (Core 0, 10KB stack): Handles all HTTP requests via `serverHttp.handleClient()`. `handleHttpServer()` becomes a no-op on ESP32.
+- **Crypto Fetch Task** (Core 0, 16KB stack): Triggered by binary semaphore; fetches HTTPS prices and writes to shadow buffer. Main loop swaps to live buffer when ready.
+- **Weather Fetch Task** (Core 0, 12KB stack): Triggered by binary semaphore; fetches weather data and writes to WeatherShadow struct. Main loop swaps to live data when ready.
+
+On ESP8266, these operations remain blocking (no FreeRTOS available) but are optimized to minimize display interruption.
 
 ## Feature Flags (define to disable)
 

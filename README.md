@@ -7,6 +7,8 @@
 A WiFi-enabled LED matrix message board system for ESP8266 and ESP32 microcontrollers that displays scrolling messages from remote systems or users via HTTP, MQTT, or a built-in web interface. Designed for home automation integration with Home Assistant, NodeRed, Linux/Windows systems, and direct browser access.
 
 ## What's New
+- **Non-Blocking Operations (ESP32):** FreeRTOS background tasks prevent LED scrolling from stuttering during network operations. HTTP page loads, crypto price fetches, weather updates, and buzzer sounds all run on Core 0 while the display loop runs uninterrupted on Core 1.
+- **Recurrent Alarm Display Indicator:** New configurable display mode shows a brief alert indicator (default `"* * *"`) when the alarm triggers, with option to customize the message.
 - **Crypto Price Ticker (ESP32):** Live cryptocurrency prices from CoinPaprika (free, no API key) scrolling on the display between clock updates. Up to 10 coins, 6 currencies, configurable fetch and display intervals.
 - **Complete Refactor:** Migrated to PlatformIO for better dependency management and improved development workflow.
 - **Modernized UI:** Redesigned responsive web interface with AJAX updates and in-page modal confirmations.
@@ -150,7 +152,7 @@ The firmware version is centrally managed in `platformio.ini` using [Semantic Ve
 ```ini
 [common]
 project_name = rda_msg_board
-version = v1.0.0  # Update here for new releases
+version = v1.4.0  # Update here for new releases
 ```
 
 All build environments automatically use this version. To create a new release, update the version here and use the release script (see Release Management section).
@@ -239,6 +241,8 @@ The script will:
 │   ├── MatrixLight6X_font.h     # Matrix Light 6px X clock bitmap font, centred (PROGMEM)
 │   ├── MatrixChunky6_font.h     # Matrix Chunky 6px clock bitmap font, centred (PROGMEM)
 │   ├── MatrixChunky6X_font.h    # Matrix Chunky 6px X clock bitmap font, centred (PROGMEM)
+│   ├── buzzer_task.h            # FreeRTOS buzzer task interface (ESP32)
+│   ├── http_task.h              # FreeRTOS HTTP task interface (ESP32)
 │   └── *.h                      # Module headers (mqtt, web, timer, weather…)
 ├── src/                         # Source files (*.cpp)
 │   ├── main.cpp                 # Setup/Loop entry point
@@ -259,9 +263,12 @@ The script will:
 │   ├── functions.cpp            # Core display control, clock & UTF-8 logic
 │   ├── utf8_utils.cpp           # UTF-8 → extended ASCII conversion
 │   ├── buzzer_utils.cpp         # Chirp & alert audio logic
+│   ├── buzzer_task.cpp          # FreeRTOS buzzer task (ESP32 non-blocking)
+│   ├── http_task.cpp            # FreeRTOS HTTP server task (ESP32 non-blocking)
 │   ├── chirp_library.cpp        # Named chirp sound definitions
 │   ├── timer.cpp                # Countdown timer / stopwatch logic
-│   └── weather.cpp              # OpenWeatherMap API integration
+│   ├── weather.cpp              # OpenWeatherMap API integration (background task on ESP32)
+│   └── crypto.cpp               # CoinPaprika API integration (background task on ESP32)
 ├── tools/                       # Development utilities
 │   ├── bdf_to_parola.py         # BDF → MD_MAX72XX PROGMEM font converter
 │   └── fonts/                   # Source BDF font files (github.com/trip5/Matrix-Fonts, CC-BY)

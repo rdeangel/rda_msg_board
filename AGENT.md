@@ -14,6 +14,15 @@ ESP8266/ESP32-based LED matrix message board with web interface, HTTP API, and M
 
 ## Recent Changes
 
+### v1.4.0 (March 2026) — Non-Blocking Operations & Recurrent Alarm Display
+**ESP32 FreeRTOS Task Architecture** — Display loop on Core 1 now runs uninterrupted:
+- **Buzzer Task** (`buzzer_task.cpp`): `playChirpByName()` posts to queue on ESP32 (non-blocking); ESP8266 path unchanged (blocking)
+- **HTTP Task** (`http_task.cpp`): All HTTP server handling moved to Core 0; `handleHttpServer()` is a no-op on ESP32, preventing page loads from blocking the display
+- **Crypto Fetch Task** (`crypto.cpp`): HTTPS fetch via binary semaphore; writes to shadow buffer; main loop swaps on completion; 16KB stack
+- **Weather Fetch Task** (`weather.cpp`): HTTP fetch via binary semaphore; writes to `WeatherShadow` struct; 12KB stack
+- **Recurrent Alarm Display** (`MODE_RECURRENT_ALARM`): New display mode shows configurable brief indicator (default `"* * *"`); on ESP32 clock continues during chirp, on ESP8266 display freezes but shows indicator
+- **New config field**: `recurrentAlarmConfig.displayMessage` — user-configurable recurrent alarm display indicator
+
 ### v1.2.0 (March 2026)
 - **AM/PM Mode**: 12-hour clock display with AM/PM suffix (`clockConfig.clockAmPm`, `clock_ampm` HA entity)
 - **Date Alternation**: 3-state cycle (time → day-of-week → date) using `clockAlternateState` int (0/1/2), replacing `showingDate` bool; configurable interval via `dateAlternateSeconds`

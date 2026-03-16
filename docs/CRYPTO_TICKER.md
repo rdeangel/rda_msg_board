@@ -126,6 +126,24 @@ build_flags =
     -DDISABLE_CRYPTO_FEATURE
 ```
 
+## Technical Architecture
+
+### Non-Blocking Fetch (ESP32)
+
+On ESP32, crypto prices are fetched on a background FreeRTOS task (Core 0), preventing the HTTPS connection from blocking the LED display loop on Core 1:
+
+1. **Main Loop** — Calls `updateCrypto()` which triggers a binary semaphore if fetch time has elapsed
+2. **Crypto Fetch Task** — Woken by semaphore, performs HTTPS fetch from CoinPaprika API
+3. **Shadow Buffer** — Task writes raw JSON response to a shadow buffer
+4. **Atomic Swap** — Main loop detects `cryptoDataReady` flag and swaps shadow buffer to live via `memcpy()`
+5. **Display** — Main loop continues scrolling crypto prices without interruption
+
+The shadow buffer pattern ensures thread-safe data exchange without mutexes — single producer (task), single consumer (main loop).
+
+### Blocking Fetch (ESP8266)
+
+On ESP8266, crypto fetch is blocking but optimized with `yieldDelay()` to allow the WiFi stack to process packets. The feature is disabled by default via `-DDISABLE_CRYPTO_FEATURE` due to heap constraints during WiFiManager setup.
+
 ## Configuration File
 
 Settings are stored in LittleFS as `/crypto_config.json`:
