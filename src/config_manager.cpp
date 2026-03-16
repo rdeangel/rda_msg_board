@@ -968,6 +968,7 @@ void loadRecurrentAlarmConfiguration(const char *configFile, recurrentAlarmConfi
   strlcpy(config.chirpName, doc["chirpName"] | "Gentle Dawn", STDSIZE);
   strlcpy(config.interval, doc["interval"] | "15min", STDSIZE);
   strlcpy(config.disableWeekends, doc["disableWeekends"] | "off", STDSIZE);
+  strlcpy(config.displayMessage, doc["displayMessage"] | "* * *", sizeof(config.displayMessage));
 
 #if DEBUG == 1
   Serial.println(F("\n=== Recurrent Alarm Configuration Loaded ==="));
@@ -987,6 +988,7 @@ void saveRecurrentAlarmConfiguration(const char *configFile, const recurrentAlar
   doc["chirpName"] = config.chirpName;
   doc["interval"] = config.interval;
   doc["disableWeekends"] = config.disableWeekends;
+  doc["displayMessage"] = config.displayMessage;
 
   File file = LittleFS.open(configFile, "w");
   if (!file) {
@@ -1022,6 +1024,7 @@ void initRecurrentAlarmStoreConfig() {
     strlcpy(recurrentAlarmConfig.chirpName, "Gentle Dawn", STDSIZE);
     strlcpy(recurrentAlarmConfig.interval, "15min", STDSIZE);
     strlcpy(recurrentAlarmConfig.disableWeekends, "off", STDSIZE);
+    strlcpy(recurrentAlarmConfig.displayMessage, "* * *", sizeof(recurrentAlarmConfig.displayMessage));
 
     // Save defaults to file
     saveRecurrentAlarmConfiguration(configFile, recurrentAlarmConfig);

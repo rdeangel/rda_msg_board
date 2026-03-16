@@ -15,6 +15,10 @@
 #ifndef DISABLE_CRYPTO_FEATURE
 #include "crypto.h"
 #endif
+#ifdef ESP32
+#include "buzzer_task.h"
+#include "http_task.h"
+#endif
 
 #ifdef ESP8266
 #include <sntp.h>
@@ -92,6 +96,7 @@ void setup() {
   // Initialize LEDC channel 0 for buzzer (required before ledcWriteTone())
   ledcSetup(0, 5000, 8);  // channel 0, 5000Hz base frequency, 8-bit resolution
   ledcAttachPin(BUZZER, 0);  // Attach buzzer pin to channel 0
+  initBuzzerTask();  // Start FreeRTOS buzzer task for non-blocking sound playback
 #endif
 
   // Display initialisation
@@ -176,6 +181,14 @@ void setup() {
 #ifndef DISABLE_CRYPTO_FEATURE
   initCryptoStoreConfig();
 #endif
+#ifdef ESP32
+  #ifndef DISABLE_CRYPTO_FEATURE
+  initCryptoTask();
+  #endif
+  #ifndef DISABLE_WEATHER_FEATURE
+  initWeatherTask();
+  #endif
+#endif
 
   //show ip address on serial
   sprintf(assignedIP, "%01d.%01d.%01d.%01d", WiFi.localIP()[0], WiFi.localIP()[1], WiFi.localIP()[2], WiFi.localIP()[3]);
@@ -186,6 +199,12 @@ void setup() {
   initNtpTime();
 
   httpWebDirDef();
+
+#ifdef ESP32
+  // Start HTTP server on Core 0 so page loads don't block the display loop on Core 1.
+  // handleHttpServer() becomes a no-op on ESP32 after this point.
+  initHttpTask();
+#endif
 
   //Scroll first message in message mode (blocking to match AP mode behavior)
   sprintf(newMessage, "Wifi Message Mode - Network: %s - IP: %s - http Username: %s - Password: %s - Version: %s", WiFi.SSID().c_str(), assignedIP, web_username, web_password, VERSION);

@@ -1,7 +1,11 @@
 #include "buzzer_utils.h"
 #include "globals.h"
 #include "functions.h"
+#include "web_server.h"
 #include "chirp_library.h"
+#ifdef ESP32
+#include "buzzer_task.h"
+#endif
 
 void wifiModeBuzzer() {
   if (strcmp(generalConfig.buzzerEnable, "off") == 0) return;
@@ -82,7 +86,7 @@ void mqttDisconnectBuzzer() {
 void yieldDelay(unsigned long ms) {
   unsigned long start = millis();
   while (millis() - start < ms) {
-    serverHttp.handleClient();
+    handleHttpServer(); // no-op on ESP32 (HTTP task owns handleClient there)
     delay(1); // Allow WiFi stack to process
     yield();
   }
@@ -205,6 +209,19 @@ bool playChirpByName(const char* chirpName, int repeatCount) {
     return false;
   }
 
+#ifdef ESP32
+  // Non-blocking path: check guards here since we bypass playChirp()
+  if (strcmp(generalConfig.buzzerEnable, "off") == 0) return false;
+  #ifndef DISABLE_SLEEP_MODE_FEATURE
+  if (isSleepModeActive()) return false;
+  #endif
+  if (repeatCount < 1) repeatCount = 1;
+  if (repeatCount > 20) repeatCount = 20;
+  PRINTS("\nPosting chirp to buzzer task: ");
+  Serial.print(chirpName);
+  return postBuzzerRequest(pattern, repeatCount);
+#else
   playChirp(pattern, repeatCount);
   return true;
+#endif
 }

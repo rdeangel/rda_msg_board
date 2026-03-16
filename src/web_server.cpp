@@ -815,7 +815,8 @@ void httpWebDirDef() {
     json += "    \"enabled\": "; addString(recurrentAlarmConfig.enabled); json += ",\n";
     json += "    \"chirpName\": "; addString(recurrentAlarmConfig.chirpName); json += ",\n";
     json += "    \"interval\": "; addString(recurrentAlarmConfig.interval); json += ",\n";
-    json += "    \"disableWeekends\": "; addString(recurrentAlarmConfig.disableWeekends); json += "\n";
+    json += "    \"disableWeekends\": "; addString(recurrentAlarmConfig.disableWeekends); json += ",\n";
+    json += "    \"displayMessage\": "; addString(recurrentAlarmConfig.displayMessage); json += "\n";
     json += "  },\n";
 
     // WiFi config (Security Warning: Password stored in plain text)
@@ -1169,6 +1170,9 @@ void httpWebDirDef() {
       if (!recurrentAlarm["disableWeekends"].isNull()) {
         strlcpy(recurrentAlarmConfig.disableWeekends, recurrentAlarm["disableWeekends"], sizeof(recurrentAlarmConfig.disableWeekends));
         recurrentAlarmDisableWeekends = (strcmp(recurrentAlarmConfig.disableWeekends, "on") == 0);
+      }
+      if (!recurrentAlarm["displayMessage"].isNull()) {
+        strlcpy(recurrentAlarmConfig.displayMessage, recurrentAlarm["displayMessage"], sizeof(recurrentAlarmConfig.displayMessage));
       }
       saveRecurrentAlarmConfiguration(recurrentAlarmConfigFile, recurrentAlarmConfig);
     }
@@ -1699,6 +1703,7 @@ void httpWebDirDef() {
     doc["chirpName"] = recurrentAlarmConfig.chirpName;
     doc["interval"] = recurrentAlarmConfig.interval;
     doc["disableWeekends"] = recurrentAlarmConfig.disableWeekends;
+    doc["displayMessage"] = recurrentAlarmConfig.displayMessage;
 
     String json;
     serializeJson(doc, json);
@@ -1726,11 +1731,13 @@ void httpWebDirDef() {
       const char* chirpName = doc["chirpName"] | "Gentle Dawn";
       const char* interval = doc["interval"] | "15min";
       const char* disableWeekends = doc["disableWeekends"] | "off";
+      const char* displayMessage = doc["displayMessage"] | "* * *";
 
       strlcpy(recurrentAlarmConfig.enabled, enabled, STDSIZE);
       strlcpy(recurrentAlarmConfig.chirpName, chirpName, STDSIZE);
       strlcpy(recurrentAlarmConfig.interval, interval, STDSIZE);
       strlcpy(recurrentAlarmConfig.disableWeekends, disableWeekends, STDSIZE);
+      strlcpy(recurrentAlarmConfig.displayMessage, displayMessage, sizeof(recurrentAlarmConfig.displayMessage));
 
       // Update runtime variables
       recurrentAlarmEnabled = (strcmp(recurrentAlarmConfig.enabled, "on") == 0);
@@ -2133,7 +2140,13 @@ void httpWebDirDef() {
                 assignedIP);
 }
 
-void handleHttpServer() { serverHttp.handleClient(); }
+void handleHttpServer() {
+#ifndef ESP32
+  // On ESP32 the HTTP task (http_task.cpp) owns all handleClient() calls.
+  // Calling it here would create concurrent access to the WebServer object.
+  serverHttp.handleClient();
+#endif
+}
 
 // ################################ END OF SPECIFIC HTTP SERVER FUNCTIONS
 // ################################//

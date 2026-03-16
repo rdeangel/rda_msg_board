@@ -22,6 +22,9 @@
 #endif
 #include "chirp_library.h"
 #include "buzzer_utils.h"
+#ifdef ESP32
+#include "buzzer_task.h"
+#endif
 // 6-series fonts (centred in 8-row display, compact height — good for 4-module clocks)
 #include "MatrixLight6_font.h"
 #include "MatrixLight6X_font.h"
@@ -284,7 +287,7 @@ void scrollTextParola() {
 
 #ifndef DISABLE_ALARM_FEATURE
   // Don't process messages when alarm is active
-  if (alarmActive || currentDisplayMode == MODE_ALARM || currentDisplayMode == MODE_ALARM_EXIT) {
+  if (alarmActive || currentDisplayMode == MODE_ALARM || currentDisplayMode == MODE_ALARM_EXIT || currentDisplayMode == MODE_RECURRENT_ALARM) {
     return;
   }
 #endif
@@ -1062,6 +1065,11 @@ void updateDisplayMode() {
       // Alarm exit is handled by updateAlarms() in main loop
       // This case is here for completeness - no action needed
       break;
+
+    case MODE_RECURRENT_ALARM:
+      // Recurrent alarm indicator display is handled by updateAlarms() in main loop
+      // This case is here for completeness - no action needed
+      break;
 #endif
 
 #ifndef DISABLE_WEATHER_FEATURE
@@ -1662,10 +1670,12 @@ void checkAlarmTriggers() {
 
     if (!dayMatches) continue;
 
-    // All conditions met - trigger the alarm
+    // All conditions met — queue the alarm so the clock can display the new minute first
     lastTriggeredAlarmMinute[i] = currentMinute;
-    triggerAlarm(i);
-    break; // Only trigger one alarm at a time
+    alarmPending = true;
+    pendingAlarmIndex = i;
+    alarmPendingTime = millis();
+    break; // Only queue one alarm at a time
   }
 
   // Reset triggered minute tracking when minute changes
@@ -1686,6 +1696,58 @@ void checkAlarmTriggers() {
  * Handles alarm display, sound playback, and repeat logic
  */
 void updateAlarms() {
+  // Resolve pending alarms after a 1-second grace period.
+  // This lets the clock display the new minute (e.g. 08:00) before the alarm fires.
+  // The grace period is long enough for at least two colon blinks / display redraws.
+  const unsigned long ALARM_GRACE_MS = 1000;
+
+  if (alarmPending && !alarmActive && currentDisplayMode != MODE_ALARM_EXIT) {
+    if (millis() - alarmPendingTime >= ALARM_GRACE_MS) {
+      alarmPending = false;
+      triggerAlarm(pendingAlarmIndex);
+      pendingAlarmIndex = -1;
+      return;
+    }
+  }
+
+  if (recurrentAlarmPending) {
+    if (millis() - recurrentAlarmPendingTime >= ALARM_GRACE_MS) {
+      recurrentAlarmPending = false;
+      triggerRecurrentAlarm();
+      return;
+    }
+  }
+
+  // Handle MODE_RECURRENT_ALARM: wait for sound to finish, then return to clock.
+  if (currentDisplayMode == MODE_RECURRENT_ALARM) {
+    bool done = false;
+    #ifdef ESP32
+    // On ESP32 the buzzer is non-blocking; wait until the task finishes.
+    // Require at least 500ms so the indicator is visible even for very short chirps.
+    done = !isBuzzerPlaying() && (millis() - recurrentAlarmDisplayStart >= 500);
+    #else
+    // On ESP8266 the chirp already finished blocking before we get here;
+    // show indicator for 2 seconds then revert.
+    done = (millis() - recurrentAlarmDisplayStart >= 2000);
+    #endif
+
+    if (done) {
+      P.displayClear();
+      if (clockEnabled && !newMessageAvailable && curMessage[0] == '\0') {
+        currentDisplayMode = MODE_CLOCK;
+        lastClockUpdate = millis();
+        lastColonToggle = millis();
+        clockColonVisible = true;
+        displayClock(true);
+        PRINTS("\nRecurrent alarm display done, returning to clock");
+      } else {
+        currentDisplayMode = MODE_MESSAGE;
+        PRINTS("\nRecurrent alarm display done, returning to message mode");
+      }
+    }
+    return;
+  }
+
   // Handle MODE_ALARM_EXIT even when alarmActive is false
   // (we set alarmActive=false when transitioning to exit mode)
   if (currentDisplayMode == MODE_ALARM_EXIT) {
@@ -1736,10 +1798,17 @@ void updateAlarms() {
         activeAlarmIndex = -1;
         P.displayClear();
       } else {
-        // Play chirp sound between repeats (play once)
+        // Play chirp sound between repeats (play once).
+        // On ESP32 gate on isBuzzerPlaying() so we don't overlap with a still-playing chirp.
+        #ifdef ESP32
+        if (strcmp(generalConfig.buzzerEnable, "on") == 0 && !isBuzzerPlaying()) {
+          playChirpByName(alarmConfig.alarms[activeAlarmIndex].chirpName, 1);
+        }
+        #else
         if (strcmp(generalConfig.buzzerEnable, "on") == 0) {
           playChirpByName(alarmConfig.alarms[activeAlarmIndex].chirpName, 1);
         }
+        #endif
 
         // Start next scroll
         displayAlarm(true);
@@ -1911,7 +1980,21 @@ void triggerRecurrentAlarm() {
   PRINT("\nChirp: ", recurrentAlarmConfig.chirpName);
   PRINT("\nInterval: ", recurrentAlarmConfig.interval);
 
-  // Play the selected chirp sound once
+  // Show brief visual indicator before playing chirp.
+  // On ESP8266 the chirp call below blocks, so the user sees the indicator
+  // at the same moment they hear the sound.
+  currentDisplayMode = MODE_RECURRENT_ALARM;
+  recurrentAlarmDisplayStart = millis();
+  if (recurrentAlarmConfig.displayMessage[0] != '\0') {
+    P.displayClear();
+    P.setFont(nullptr);
+    P.setIntensity(getEffectiveBrightness(clockBrightness));
+    P.print(recurrentAlarmConfig.displayMessage);
+  }
+
+  // Play chirp:
+  //   ESP32: non-blocking — posts to FreeRTOS buzzer task queue, returns immediately.
+  //   ESP8266: blocking — returns only after sound completes.
   playChirpByName(recurrentAlarmConfig.chirpName, 1);
 
   // Update last trigger time
@@ -1952,7 +2035,8 @@ void checkRecurrentAlarm() {
     if (currentHour == 12 && currentMinute == 0 && currentSecond < 5) {
       if (currentDay != lastTriggeredDay) {
         lastTriggeredDay = currentDay;
-        triggerRecurrentAlarm();
+        recurrentAlarmPending = true;
+        recurrentAlarmPendingTime = millis();
       }
     }
     return;
@@ -1969,7 +2053,8 @@ void checkRecurrentAlarm() {
     if (currentMinute != lastTriggeredMinute || currentDay != lastTriggeredDay) {
       lastTriggeredMinute = currentMinute;
       lastTriggeredDay = currentDay;
-      triggerRecurrentAlarm();
+      recurrentAlarmPending = true;
+      recurrentAlarmPendingTime = millis();
     }
   }
 }

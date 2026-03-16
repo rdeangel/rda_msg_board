@@ -7,7 +7,10 @@
 
 // Crypto price ticker update and display functions
 void updateCrypto();                             // Main update function called from loop
-void fetchCryptoData(bool forceRefresh = false); // HTTPS API calls to CoinPaprika (one per coin)
+void fetchCryptoData(bool forceRefresh = false); // Trigger HTTPS fetch (non-blocking on ESP32 via task)
+#ifdef ESP32
+void initCryptoTask();                           // Create FreeRTOS fetch task (call once from setup)
+#endif
 void displayCrypto(bool withAnimation);          // Display crypto prices on LED
 bool shouldDisplayCrypto();                      // Check if crypto should be shown
 String getCryptoStatusJson();                    // JSON status for web UI

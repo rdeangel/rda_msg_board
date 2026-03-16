@@ -7,7 +7,10 @@
 
 // Weather update and display functions
 void updateWeather();                              // Main update function called from loop
-void fetchWeatherData(bool forceRefresh = false);  // HTTP API call to weather service
+void fetchWeatherData(bool forceRefresh = false);  // Trigger HTTP fetch (non-blocking on ESP32 via task)
+#ifdef ESP32
+void initWeatherTask();                            // Create FreeRTOS fetch task (call once from setup)
+#endif
 void displayWeather(bool withAnimation); // Display weather on LED
 bool shouldDisplayWeather();             // Check if weather should be shown
 String getWeatherStatusJson();           // JSON status for web UI

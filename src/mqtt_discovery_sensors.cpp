@@ -1807,6 +1807,7 @@ void publishDisplayModeState() {
 #ifndef DISABLE_ALARM_FEATURE
     case MODE_ALARM: modeStr = "ALARM"; break;
     case MODE_ALARM_EXIT: modeStr = "ALARM_EXIT"; break;
+    case MODE_RECURRENT_ALARM: modeStr = "RECURRENT_ALARM"; break;
 #endif
 #ifndef DISABLE_WEATHER_FEATURE
     case MODE_WEATHER: modeStr = "WEATHER"; break;

@@ -268,6 +268,9 @@ extern unsigned long lastAlarmToggle;       // Last time message toggled
 extern unsigned long lastAlarmCheck;        // Last time we checked for alarms
 extern char alarmDisplayMessage[ALARM_MESSAGE_SIZE + 16]; // Buffer for alarm message display
 extern int lastTriggeredAlarmMinute[MAX_ALARMS]; // Track last triggered minute per alarm to prevent re-triggering
+extern bool alarmPending;                   // Alarm queued — waiting for clock to show new minute before firing
+extern int pendingAlarmIndex;              // Which scheduled alarm is pending
+extern unsigned long alarmPendingTime;     // When the pending alarm was queued
 
 // Recurrent Alarm Configuration
 extern recurrentAlarmConfigObj recurrentAlarmConfig;
@@ -278,6 +281,9 @@ extern bool recurrentAlarmEnabled;
 extern unsigned long lastRecurrentAlarmTrigger;
 extern int recurrentAlarmIntervalMinutes;  // Converted interval in minutes
 extern bool recurrentAlarmDisableWeekends;  // Disable alarm on weekends
+extern bool recurrentAlarmPending;          // Recurrent alarm queued — waiting for clock to show new minute
+extern unsigned long recurrentAlarmPendingTime; // When the pending recurrent alarm was queued
+extern unsigned long recurrentAlarmDisplayStart; // When MODE_RECURRENT_ALARM display started
 #endif // DISABLE_ALARM_FEATURE
 
 #ifndef DISABLE_WEATHER_FEATURE
@@ -296,6 +302,10 @@ extern char weatherForecast[WEATHER_FORECAST_SIZE];     // Forecast info (high/l
 extern bool weatherDataValid;            // Whether we have valid weather data
 extern int weatherCode;                  // Weather condition code from API
 extern bool weatherRefreshRequested;     // Flag to request refresh from main loop
+#ifdef ESP32
+extern volatile bool weatherDataReady;   // Task completed — shadow buffer ready to swap
+extern volatile bool weatherFetching;    // Task currently fetching
+#endif
 #endif // DISABLE_WEATHER_FEATURE
 
 #ifndef DISABLE_CRYPTO_FEATURE
@@ -311,6 +321,10 @@ extern unsigned long cryptoDisplayStart; // When crypto display started
 extern char cryptoPriceBuffer[CRYPTO_PRICE_BUF_SIZE]; // Full formatted price string
 extern bool cryptoDataValid;             // Whether we have valid crypto data
 extern bool cryptoRefreshRequested;      // Flag to request refresh from main loop
+#ifdef ESP32
+extern volatile bool cryptoDataReady;    // Task completed — shadow buffer ready to swap
+extern volatile bool cryptoFetching;     // Task currently fetching
+#endif
 #endif // DISABLE_CRYPTO_FEATURE
 
 #endif // GLOBALS_H

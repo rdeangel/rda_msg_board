@@ -63,57 +63,58 @@ const char* getWeatherIcon(int code) {
   return "?";
 }
 
-// Fetch weather data from Open-Meteo API
-// forceRefresh bypasses the enabled check (for manual refresh from UI)
-void fetchWeatherData(bool forceRefresh) {
-  if (!forceRefresh && !weatherEnabled) return;
+// Shadow data — written by background task, swapped to live by main loop
+struct WeatherShadow {
+  char temperature[WEATHER_TEMP_SIZE];
+  char condition[WEATHER_CONDITION_SIZE];
+  char forecast[WEATHER_FORECAST_SIZE];
+  int code;
+  bool dataValid;
+};
 
-  // Check if coordinates are configured
+#ifdef ESP32
+static WeatherShadow weatherShadow;
+static SemaphoreHandle_t weatherFetchTrigger = nullptr;
+
+static void performWeatherFetch() {
+  weatherShadow.temperature[0] = '\0';
+  weatherShadow.condition[0] = '\0';
+  weatherShadow.forecast[0] = '\0';
+  weatherShadow.code = 0;
+  weatherShadow.dataValid = false;
+
   if (strlen(weatherConfig.latitude) == 0 || strlen(weatherConfig.longitude) == 0) {
     PRINTS("\nWeather: No coordinates configured");
-    weatherDataValid = false;
+    lastWeatherFetch = millis();
     return;
   }
 
-  // Check WiFi connection
   if (WiFi.status() != WL_CONNECTED) {
     PRINTS("\nWeather: WiFi not connected");
     return;
   }
 
-  PRINTS("\nFetching weather data...");
+  PRINTS("\nFetching weather data (background task)...");
 
-  // Build API URL using char buffer (stack) to avoid String fragmentation
-  // Open-Meteo API: free, no key required
   char url[512];
   bool isFahrenheit = (strcmp(weatherConfig.temperatureUnit, "F") == 0);
-  
-  snprintf(url, sizeof(url), 
+
+  snprintf(url, sizeof(url),
            "http://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&forecast_days=1%s",
-           weatherConfig.latitude, 
+           weatherConfig.latitude,
            weatherConfig.longitude,
            isFahrenheit ? "&temperature_unit=fahrenheit" : "");
 
   PRINT("\nWeather URL: ", url);
 
-  #ifdef ESP8266
-    WiFiClient client;
-    HTTPClient http;
-    http.begin(client, url);
-  #elif defined(ESP32)
-    HTTPClient http;
-    http.begin(url);
-  #endif
-
-  http.setTimeout(5000);  // Reduce to 5 seconds to avoid long blocking
+  HTTPClient http;
+  http.begin(url);
+  http.setTimeout(5000);
   int httpCode = http.GET();
 
   if (httpCode == HTTP_CODE_OK) {
-    // We use getString() instead of getStream() because getStream() can cause InvalidInput errors
-    // with deserializeJson() on some ESP core versions, likely due to stream buffering issues.
-    // The payload is small (approx 500-600 bytes) so a temporary String is acceptable.
     String payload = http.getString();
-    
+
     if (payload.length() > 0) {
       PRINT("\nWeather response: ", payload.c_str());
 
@@ -121,11 +122,9 @@ void fetchWeatherData(bool forceRefresh) {
       DeserializationError error = deserializeJson(doc, payload);
 
       if (!error) {
-        // Extract current weather
         float temp = doc["current"]["temperature_2m"] | 0.0f;
         int code = doc["current"]["weather_code"] | 0;
 
-        // Extract daily forecast (high/low)
         float tempMax = 0.0f;
         float tempMin = 0.0f;
 
@@ -138,24 +137,129 @@ void fetchWeatherData(bool forceRefresh) {
           if (minArr.size() > 0) tempMin = minArr[0];
         }
 
-        // Store weather data
+        weatherShadow.code = code;
+        const char* unit = isFahrenheit ? "°F" : "°C";
+
+        snprintf(weatherShadow.temperature, sizeof(weatherShadow.temperature), "%.0f%s", temp, unit);
+        strlcpy(weatherShadow.condition, getWeatherCondition(code), sizeof(weatherShadow.condition));
+        snprintf(weatherShadow.forecast, sizeof(weatherShadow.forecast), "High:%.0f%s Low:%.0f%s", tempMax, unit, tempMin, unit);
+        weatherShadow.dataValid = true;
+
+        PRINT("\nWeather fetched: ", weatherShadow.temperature);
+        PRINT(" ", weatherShadow.condition);
+      } else {
+        PRINT("\nWeather JSON parse error: ", error.c_str());
+      }
+    } else {
+      PRINTS("\nWeather error: Empty payload");
+    }
+  } else {
+    PRINT("\nWeather HTTP error: ", httpCode);
+  }
+
+  lastWeatherFetch = millis();
+  http.end();
+}
+
+static void weatherFetchTask(void* pvParameters) {
+  while (true) {
+    xSemaphoreTake(weatherFetchTrigger, portMAX_DELAY);
+    performWeatherFetch();
+    weatherDataReady = true;
+    weatherFetching = false;
+  }
+}
+
+void initWeatherTask() {
+  weatherFetchTrigger = xSemaphoreCreateBinary();
+  xTaskCreatePinnedToCore(
+    weatherFetchTask,
+    "WeatherFetch",
+    12288,
+    nullptr,
+    1,
+    nullptr,
+    0
+  );
+}
+
+// Trigger a weather fetch — non-blocking on ESP32.
+void fetchWeatherData(bool forceRefresh) {
+  if (!forceRefresh && !weatherEnabled) return;
+  if (weatherFetchTrigger == nullptr) return;
+  if (weatherFetching) return;
+  weatherFetching = true;
+  xSemaphoreGive(weatherFetchTrigger);
+}
+
+#else // ESP8266
+
+// ESP8266 synchronous fetch (weather is disabled by default on ESP8266 but kept for completeness)
+void fetchWeatherData(bool forceRefresh) {
+  if (!forceRefresh && !weatherEnabled) return;
+
+  if (strlen(weatherConfig.latitude) == 0 || strlen(weatherConfig.longitude) == 0) {
+    PRINTS("\nWeather: No coordinates configured");
+    weatherDataValid = false;
+    return;
+  }
+
+  if (WiFi.status() != WL_CONNECTED) {
+    PRINTS("\nWeather: WiFi not connected");
+    return;
+  }
+
+  PRINTS("\nFetching weather data...");
+
+  char url[512];
+  bool isFahrenheit = (strcmp(weatherConfig.temperatureUnit, "F") == 0);
+
+  snprintf(url, sizeof(url),
+           "http://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&forecast_days=1%s",
+           weatherConfig.latitude,
+           weatherConfig.longitude,
+           isFahrenheit ? "&temperature_unit=fahrenheit" : "");
+
+  PRINT("\nWeather URL: ", url);
+
+  WiFiClient client;
+  HTTPClient http;
+  http.begin(client, url);
+  http.setTimeout(5000);
+  int httpCode = http.GET();
+
+  if (httpCode == HTTP_CODE_OK) {
+    String payload = http.getString();
+
+    if (payload.length() > 0) {
+      JsonDocument doc;
+      DeserializationError error = deserializeJson(doc, payload);
+
+      if (!error) {
+        float temp = doc["current"]["temperature_2m"] | 0.0f;
+        int code = doc["current"]["weather_code"] | 0;
+
+        float tempMax = 0.0f;
+        float tempMin = 0.0f;
+
+        if (!doc["daily"]["temperature_2m_max"].isNull()) {
+          JsonArray maxArr = doc["daily"]["temperature_2m_max"].as<JsonArray>();
+          if (maxArr.size() > 0) tempMax = maxArr[0];
+        }
+        if (!doc["daily"]["temperature_2m_min"].isNull()) {
+          JsonArray minArr = doc["daily"]["temperature_2m_min"].as<JsonArray>();
+          if (minArr.size() > 0) tempMin = minArr[0];
+        }
+
         weatherCode = code;
         const char* unit = isFahrenheit ? "°F" : "°C";
 
-        // Format temperature string
         snprintf(weatherTemperature, sizeof(weatherTemperature), "%.0f%s", temp, unit);
-
-        // Format condition string
         strlcpy(weatherCondition, getWeatherCondition(code), sizeof(weatherCondition));
-
-        // Format forecast string (high/low)
         snprintf(weatherForecast, sizeof(weatherForecast), "High:%.0f%s Low:%.0f%s", tempMax, unit, tempMin, unit);
-
         weatherDataValid = true;
 
         PRINT("\nWeather updated: ", weatherTemperature);
-        PRINT(" ", weatherCondition);
-        PRINT(" ", weatherForecast);
       } else {
         PRINT("\nWeather JSON parse error: ", error.c_str());
         weatherDataValid = false;
@@ -169,12 +273,11 @@ void fetchWeatherData(bool forceRefresh) {
     weatherDataValid = false;
   }
 
-  // CRITICAL: Update last fetch time even on failure to prevent rapid-fire retry loop
-  // This prevents Denial of Service on self/API and prevents potential WDT resets
   lastWeatherFetch = millis();
-
   http.end();
 }
+
+#endif // ESP32
 
 // Check if weather should be displayed
 bool shouldDisplayWeather() {
@@ -243,23 +346,49 @@ void displayWeather(bool withAnimation) {
 
 // Main weather update function - called from loop
 void updateWeather() {
-  // Handle manual refresh request from web UI (done here to avoid stack issues)
+#ifdef ESP32
+  // Swap shadow data to live when background task completes
+  if (weatherDataReady) {
+    strlcpy(weatherTemperature, weatherShadow.temperature, sizeof(weatherTemperature));
+    strlcpy(weatherCondition,   weatherShadow.condition,   sizeof(weatherCondition));
+    strlcpy(weatherForecast,    weatherShadow.forecast,    sizeof(weatherForecast));
+    weatherCode = weatherShadow.code;
+    weatherDataValid = weatherShadow.dataValid;
+    weatherDataReady = false;
+    PRINTS("\nWeather: shadow data swapped to live");
+  }
+
+  if (!weatherEnabled) return;
+
+  // Handle manual refresh request from web UI
   if (weatherRefreshRequested) {
     weatherRefreshRequested = false;
     Serial.println(F("Processing weather refresh request..."));
-    fetchWeatherData(true);  // Force refresh bypasses enabled check
+    fetchWeatherData(true);
+    return;
+  }
+
+  // Periodic fetch
+  unsigned long updateInterval = (unsigned long)atoi(weatherConfig.updateIntervalMinutes) * 60000UL;
+  if (!weatherFetching && (lastWeatherFetch == 0 || (millis() - lastWeatherFetch >= updateInterval))) {
+    fetchWeatherData(false);
+  }
+#else
+  // ESP8266 synchronous path
+  if (weatherRefreshRequested) {
+    weatherRefreshRequested = false;
+    Serial.println(F("Processing weather refresh request..."));
+    fetchWeatherData(true);
     return;
   }
 
   if (!weatherEnabled) return;
 
-  // Fetch weather data periodically
   unsigned long updateInterval = (unsigned long)atoi(weatherConfig.updateIntervalMinutes) * 60000UL;
-
-  // Initial fetch or periodic update
   if (lastWeatherFetch == 0 || (millis() - lastWeatherFetch >= updateInterval)) {
     fetchWeatherData(false);
   }
+#endif
 }
 
 // Get weather status as JSON for web UI

@@ -267,6 +267,9 @@ unsigned long lastAlarmToggle = 0;
 unsigned long lastAlarmCheck = 0;
 char alarmDisplayMessage[ALARM_MESSAGE_SIZE + 16] = "";
 int lastTriggeredAlarmMinute[MAX_ALARMS];
+bool alarmPending = false;
+int pendingAlarmIndex = -1;
+unsigned long alarmPendingTime = 0;
 
 // Recurrent Alarm Configuration
 recurrentAlarmConfigObj recurrentAlarmConfig;
@@ -275,6 +278,9 @@ bool recurrentAlarmEnabled = false;
 unsigned long lastRecurrentAlarmTrigger = 0;
 int recurrentAlarmIntervalMinutes = 15;
 bool recurrentAlarmDisableWeekends = false;
+bool recurrentAlarmPending = false;
+unsigned long recurrentAlarmPendingTime = 0;
+unsigned long recurrentAlarmDisplayStart = 0;
 #endif // DISABLE_ALARM_FEATURE
 
 #ifndef DISABLE_WEATHER_FEATURE
@@ -293,6 +299,10 @@ char weatherForecast[WEATHER_FORECAST_SIZE] = "";
 bool weatherDataValid = false;
 int weatherCode = 0;
 bool weatherRefreshRequested = false;
+#ifdef ESP32
+volatile bool weatherDataReady = false;
+volatile bool weatherFetching = false;
+#endif
 #endif // DISABLE_WEATHER_FEATURE
 
 #ifndef DISABLE_CRYPTO_FEATURE
@@ -308,4 +318,8 @@ unsigned long cryptoDisplayStart = 0;
 char cryptoPriceBuffer[CRYPTO_PRICE_BUF_SIZE] = "";
 bool cryptoDataValid = false;
 bool cryptoRefreshRequested = false;
+#ifdef ESP32
+volatile bool cryptoDataReady = false;
+volatile bool cryptoFetching = false;
+#endif
 #endif // DISABLE_CRYPTO_FEATURE

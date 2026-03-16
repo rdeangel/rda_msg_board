@@ -296,6 +296,7 @@ struct recurrentAlarmConfigObj {
   char chirpName[CHIRP_SIZE];         // Chirp pattern name from chirp_library
   char interval[INTERVAL_SIZE];       // "15min", "30min", "1hour", "3hours", "6hours", "midday"
   char disableWeekends[FLAG_SIZE];    // "on" or "off" - disable alarm on Saturday and Sunday
+  char displayMessage[ALARM_MESSAGE_SIZE]; // Brief indicator shown on display when alarm fires (e.g. "* * *"). Empty = no display change.
 };
 #endif
 
@@ -355,8 +356,9 @@ enum DisplayMode {
 #endif
 #ifndef DISABLE_ALARM_FEATURE
   ,
-  MODE_ALARM,       // Displaying alarm
-  MODE_ALARM_EXIT   // Animating alarm exit
+  MODE_ALARM,            // Displaying alarm
+  MODE_ALARM_EXIT,       // Animating alarm exit
+  MODE_RECURRENT_ALARM   // Brief indicator for recurrent alarm chirp
 #endif
 #ifndef DISABLE_WEATHER_FEATURE
   ,

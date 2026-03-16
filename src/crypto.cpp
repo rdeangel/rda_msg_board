@@ -57,15 +57,22 @@ static void makeCoinLabel(char* buf, size_t bufSize, const char* coinId) {
 
 // --- Fetch ---
 
-// Fetch crypto price data from CoinPaprika API (free, no API key required)
-// One HTTPS request per coin: GET /v1/tickers/{coin-id}?quotes={CURRENCY}
-// forceRefresh bypasses the enabled check (for manual refresh from UI)
-void fetchCryptoData(bool forceRefresh) {
-  if (!forceRefresh && !cryptoEnabled) return;
+#ifdef ESP32
+
+// Shadow buffer — written by background task, swapped to live by main loop
+static char cryptoShadowBuffer[CRYPTO_PRICE_BUF_SIZE];
+static bool cryptoShadowDataValid = false;
+
+static SemaphoreHandle_t cryptoFetchTrigger = nullptr;
+
+// Inner fetch logic — runs inside the background task, writes to shadow buffer
+static void performCryptoFetch() {
+  cryptoShadowBuffer[0] = '\0';
+  cryptoShadowDataValid = false;
 
   if (strlen(cryptoConfig.coins) == 0) {
     PRINTS("\nCrypto: No coins configured");
-    cryptoDataValid = false;
+    lastCryptoFetch = millis();
     return;
   }
 
@@ -74,10 +81,8 @@ void fetchCryptoData(bool forceRefresh) {
     return;
   }
 
-#ifdef ESP32
-  PRINTS("\nFetching crypto data...");
+  PRINTS("\nFetching crypto data (background task)...");
 
-  // Parse comma-separated coin IDs (max MAX_CRYPTO_COINS)
   char coinsCopy[CRYPTO_COINS_SIZE];
   strlcpy(coinsCopy, cryptoConfig.coins, sizeof(coinsCopy));
 
@@ -85,7 +90,7 @@ void fetchCryptoData(bool forceRefresh) {
   int coinCount = 0;
   char* token = strtok(coinsCopy, ",");
   while (token && coinCount < MAX_CRYPTO_COINS) {
-    while (*token == ' ') token++;  // Trim leading whitespace
+    while (*token == ' ') token++;
     if (strlen(token) > 0) {
       coinIds[coinCount++] = token;
     }
@@ -94,24 +99,19 @@ void fetchCryptoData(bool forceRefresh) {
 
   if (coinCount == 0) {
     PRINTS("\nCrypto: No valid coin IDs parsed");
-    cryptoDataValid = false;
     lastCryptoFetch = millis();
     return;
   }
 
-  // Build price buffer across all coin requests
-  cryptoPriceBuffer[0] = '\0';
   bool anySuccess = false;
 
-  // Unique User-Agent per device — prevents shared firmware from triggering User-Agent blocks
   char userAgent[48];
   snprintf(userAgent, sizeof(userAgent), "ESP32HTTPClient-%08X", (uint32_t)ESP.getEfuseMac());
 
   WiFiClientSecure client;
-  client.setInsecure();  // Skip certificate verification (matches existing TLS pattern)
+  client.setInsecure();
 
   for (int i = 0; i < coinCount; i++) {
-    // URL: https://api.coinpaprika.com/v1/tickers/{coin-id}?quotes={CURRENCY}
     char url[256];
     snprintf(url, sizeof(url),
              "https://api.coinpaprika.com/v1/tickers/%s?quotes=%s",
@@ -124,7 +124,6 @@ void fetchCryptoData(bool forceRefresh) {
     http.begin(client, url);
     http.setTimeout(8000);
     http.setUserAgent(userAgent);
-    // If an API key is configured, send it — moves from IP-based to account-based rate limiting
     if (strlen(cryptoConfig.apiKey) > 0) {
       http.addHeader("Authorization", String("Api-Key ") + cryptoConfig.apiKey);
     }
@@ -139,11 +138,9 @@ void fetchCryptoData(bool forceRefresh) {
         DeserializationError error = deserializeJson(doc, payload);
 
         if (!error) {
-          // Use the ticker symbol from the response (e.g. "BTC", "ETH") as the label
           const char* symbol = doc["symbol"].as<const char*>();
           if (!symbol) symbol = coinIds[i];
 
-          // Extract price: doc["quotes"][currency]["price"]
           JsonObject quotes = doc["quotes"];
           if (!quotes.isNull() && !quotes[cryptoConfig.currency].isNull()) {
             float price = quotes[cryptoConfig.currency]["price"].as<float>();
@@ -154,11 +151,11 @@ void fetchCryptoData(bool forceRefresh) {
             makeCoinLabel(coinLabel, sizeof(coinLabel), symbol);
 
             if (anySuccess) {
-              strlcat(cryptoPriceBuffer, " | ", CRYPTO_PRICE_BUF_SIZE);
+              strlcat(cryptoShadowBuffer, " | ", CRYPTO_PRICE_BUF_SIZE);
             }
-            strlcat(cryptoPriceBuffer, coinLabel, CRYPTO_PRICE_BUF_SIZE);
-            strlcat(cryptoPriceBuffer, ": ", CRYPTO_PRICE_BUF_SIZE);
-            strlcat(cryptoPriceBuffer, priceBuf, CRYPTO_PRICE_BUF_SIZE);
+            strlcat(cryptoShadowBuffer, coinLabel, CRYPTO_PRICE_BUF_SIZE);
+            strlcat(cryptoShadowBuffer, ": ", CRYPTO_PRICE_BUF_SIZE);
+            strlcat(cryptoShadowBuffer, priceBuf, CRYPTO_PRICE_BUF_SIZE);
             anySuccess = true;
 
             PRINT("\nCrypto fetched: ", coinLabel);
@@ -178,17 +175,50 @@ void fetchCryptoData(bool forceRefresh) {
     http.end();
   }
 
-  cryptoDataValid = anySuccess;
+  cryptoShadowDataValid = anySuccess;
   if (anySuccess) {
-    PRINT("\nCrypto prices: ", cryptoPriceBuffer);
+    PRINT("\nCrypto prices: ", cryptoShadowBuffer);
   } else {
     PRINTS("\nCrypto: No prices fetched successfully");
   }
 
   // CRITICAL: Update last fetch time even on failure to prevent rapid-fire retry loop
   lastCryptoFetch = millis();
-#endif // ESP32
 }
+
+static void cryptoFetchTask(void* pvParameters) {
+  while (true) {
+    xSemaphoreTake(cryptoFetchTrigger, portMAX_DELAY);
+    performCryptoFetch();
+    cryptoDataReady = true;
+    cryptoFetching = false;
+  }
+}
+
+void initCryptoTask() {
+  cryptoFetchTrigger = xSemaphoreCreateBinary();
+  xTaskCreatePinnedToCore(
+    cryptoFetchTask,
+    "CryptoFetch",
+    16384,
+    nullptr,
+    1,
+    nullptr,
+    0
+  );
+}
+
+// Trigger a crypto fetch — non-blocking, posts to background task.
+// forceRefresh bypasses the enabled check.
+void fetchCryptoData(bool forceRefresh) {
+  if (!forceRefresh && !cryptoEnabled) return;
+  if (cryptoFetchTrigger == nullptr) return;
+  if (cryptoFetching) return; // Task already running
+  cryptoFetching = true;
+  xSemaphoreGive(cryptoFetchTrigger);
+}
+
+#endif // ESP32
 
 // --- Display ---
 
@@ -254,23 +284,31 @@ void displayCrypto(bool withAnimation) {
 
 // Main crypto update function - called from loop
 void updateCrypto() {
-  // Handle manual refresh request from web UI (done here to avoid stack issues)
-  if (cryptoRefreshRequested) {
-    cryptoRefreshRequested = false;
-    Serial.println(F("Processing crypto refresh request..."));
-    fetchCryptoData(true); // Force refresh bypasses enabled check
-    return;
+#ifdef ESP32
+  // Swap shadow buffer to live buffer when background task completes
+  if (cryptoDataReady) {
+    memcpy(cryptoPriceBuffer, cryptoShadowBuffer, CRYPTO_PRICE_BUF_SIZE);
+    cryptoDataValid = cryptoShadowDataValid;
+    cryptoDataReady = false;
+    PRINTS("\nCrypto: shadow buffer swapped to live");
   }
 
   if (!cryptoEnabled) return;
 
-  // Fetch crypto data periodically
-  unsigned long updateInterval = (unsigned long)atoi(cryptoConfig.updateIntervalMinutes) * 60000UL;
+  // Handle manual refresh request from web UI
+  if (cryptoRefreshRequested) {
+    cryptoRefreshRequested = false;
+    Serial.println(F("Processing crypto refresh request..."));
+    fetchCryptoData(true);
+    return;
+  }
 
-  // Initial fetch or periodic update
-  if (lastCryptoFetch == 0 || (millis() - lastCryptoFetch >= updateInterval)) {
+  // Periodic fetch
+  unsigned long updateInterval = (unsigned long)atoi(cryptoConfig.updateIntervalMinutes) * 60000UL;
+  if (!cryptoFetching && (lastCryptoFetch == 0 || (millis() - lastCryptoFetch >= updateInterval))) {
     fetchCryptoData(false);
   }
+#endif // ESP32
 }
 
 // --- JSON Status/Config for Web UI ---
