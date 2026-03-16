@@ -410,7 +410,7 @@ Seven clock faces are available across two series, all sourced from the [trip5/M
 - Display currency: USD, EUR, GBP, JPY, BTC, ETH
 - Independent fetch interval (15 min–4h) and display interval (1 min–4h)
 - Configurable scroll repetitions and brightness
-- See **[Crypto Ticker Guide](docs/CRYPTO_TICKER.md)** for full details, coin ID list, and rate limit information
+- See **[Crypto Ticker Guide](docs/CRYPTO_TICKER.md)** for full details, coin IDs, API key setup, and CoinPaprika API information
 
 **Sleep Mode** - Configure schedule:
 - Scheduled display dimming or blackout windows
@@ -810,7 +810,7 @@ Current firmware version is defined in `platformio.ini` and displayed on the web
 
 **Personal Use Only:** This is a hobbyist project created for educational and personal purposes. In accordance with [CoinPaprika's Terms of Use](https://coinpaprika.com/terms-of-use/):
 - This software does not support commercial redistribution.
-- Users are responsible for adhering to the free plan rate limits (20,000 requests/month).
+- Users are responsible for adhering to CoinPaprika's applicable rate limits — see the [API documentation](https://api.coinpaprika.com/) for current plan details.
 - Any individual or entity selling hardware pre-loaded with this software is responsible for securing a commercial/Enterprise license from CoinPaprika.
 
 **Liability:** The developer of this project is not responsible for any API bans, financial losses, or legal actions taken by third-party data providers against the user.
@@ -848,7 +848,7 @@ Detailed documentation for specific features and integrations:
 - **[MQTT Examples](docs/MQTT_EXAMPLES.md)** - CLI and script examples for MQTT control
 - **[HTTP API Examples](docs/HTTP_API_EXAMPLES.md)** - Comprehensive guide to the REST API
 - **[MQTT TLS Implementation](docs/MQTT_TLS_IMPLEMENTATION.md)** - Technical details of SSL/TLS security on ESP32
-- **[Crypto Price Ticker](docs/CRYPTO_TICKER.md)** - Coin IDs, rate limits, build flags, HA integration
+- **[Crypto Price Ticker](docs/CRYPTO_TICKER.md)** - Coin IDs, API key setup, build flags, HA integration
 - **[Architecture](docs/ARCHITECTURE.md)** - System architecture and module documentation
 
 ## Code Organization

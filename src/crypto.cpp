@@ -14,12 +14,15 @@
 
 // --- Price Formatting ---
 
-// Get currency prefix symbol for display
+// Get currency prefix symbol for display.
+// UTF-8 encoded so cryptoPriceBuffer is valid UTF-8 for MQTT/HA.
+// displayCrypto() calls utf8Ascii() on its local copy before sending to the LED,
+// converting these to the single-byte font positions (£=0xA3, €=0x80, ¥=0xA5).
 static const char* getCurrencyPrefix(const char* currency) {
   if (strcmp(currency, "USD") == 0) return "$";
-  if (strcmp(currency, "EUR") == 0) return "EUR ";
-  if (strcmp(currency, "GBP") == 0) return "GBP ";
-  if (strcmp(currency, "JPY") == 0) return "JPY ";
+  if (strcmp(currency, "GBP") == 0) return "\xc2\xa3";    // £ (UTF-8) → 0xA3 after utf8Ascii
+  if (strcmp(currency, "EUR") == 0) return "\xe2\x82\xac"; // € (UTF-8) → 0x80 after utf8Ascii
+  if (strcmp(currency, "JPY") == 0) return "\xc2\xa5";    // ¥ (UTF-8) → 0xA5 after utf8Ascii
   if (strcmp(currency, "BTC") == 0) return "BTC ";
   if (strcmp(currency, "ETH") == 0) return "ETH ";
   return "";
@@ -228,9 +231,11 @@ void displayCrypto(bool withAnimation) {
   P.setFont(nullptr);
   P.setIntensity(getEffectiveBrightness(cryptoBrightness));
 
-  // cryptoPriceBuffer is already the full scrolling string
+  // Copy price buffer and convert UTF-8 currency symbols to single-byte font positions
+  // (e.g. £ \xc2\xa3 → \xa3, € \xe2\x82\xac → \x80) — cryptoPriceBuffer stays as UTF-8 for MQTT/HA
   static char cryptoDisplayString[CRYPTO_PRICE_BUF_SIZE];
   strlcpy(cryptoDisplayString, cryptoPriceBuffer, sizeof(cryptoDisplayString));
+  utf8Ascii(cryptoDisplayString);
 
   if (withAnimation) {
     P.displayClear();

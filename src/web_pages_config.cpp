@@ -2783,8 +2783,8 @@ window.onload = function() {
         <label for="CRYPTO_API_KEY">CoinPaprika API Key <span style="color: var(--subtext); font-weight: normal;">(optional)</span></label>
         <input type="text" id="CRYPTO_API_KEY" name="CryptoApiKey" placeholder="Leave empty for unauthenticated access" autocomplete="off">
         <p style="font-size: 0.85rem; color: var(--subtext); margin: 5px 0 15px 0;">
-          Without a key: 1,000 requests/day limit, IP-based. With a free registered key: 20,000/month, account-based.
-          Register free at <a href="https://coinpaprika.com/api/" target="_blank" style="color: var(--accent);">coinpaprika.com/api</a>.
+          An API key moves from IP-based to account-based tracking.
+          Register free at <a href="https://coinpaprika.com/api/" target="_blank" style="color: var(--accent);">coinpaprika.com/api</a> — see their site for current plan limits.
         </p>
 
         <!-- Coins -->
@@ -2837,7 +2837,7 @@ window.onload = function() {
         <input type="range" id="CRYPTO_FETCH_INTERVAL" min="0" max="8" value="2" step="1"
                oninput="document.getElementById('CRYPTO_FETCH_INTERVAL_VAL').textContent=stepsLabel(CRYPTO_FETCH_STEPS[this.value])"
                style="width: 100%; margin-bottom: 5px;">
-        <p style="font-size: 0.85rem; color: var(--subtext); margin: 0 0 15px 0;">How often to fetch fresh prices from the API. (15 min – 4h) &nbsp;&mdash;&nbsp; At 30-min intervals with 10 coins: ~7,200 calls/month, within the 20,000/month free limit.</p>
+        <p style="font-size: 0.85rem; color: var(--subtext); margin: 0 0 15px 0;">How often to fetch fresh prices from the API. (15 min – 4h) &nbsp;&mdash;&nbsp; A longer interval reduces API calls; use a registered key for higher limits.</p>
 
         <!-- Display Interval -->
         <label for="CRYPTO_DISPLAY_INTERVAL">Display Interval: <span id="CRYPTO_DISPLAY_INTERVAL_VAL">5 min</span></label>
@@ -2877,10 +2877,10 @@ window.onload = function() {
         <!-- Attribution -->
         <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 15px 0;">
           <p style="font-size: 0.8rem; color: var(--subtext); margin: 0;">
-            Data provided by <a href="https://coinpaprika.com/" target="_blank" style="color: var(--accent);">CoinPaprika</a> (free — API key optional, recommended for higher rate limits).
-            <strong style="color: var(--text);">Personal use only</strong> per CoinPaprika&rsquo;s free plan terms &mdash; commercial redistribution is not permitted.
-            Users are responsible for staying within the 20,000 requests/month free limit.
-            See <a href="https://coinpaprika.com/terms-of-use/" target="_blank" style="color: var(--accent);">Terms of Use</a>.
+            Data provided by <a href="https://coinpaprika.com/" target="_blank" style="color: var(--accent);">CoinPaprika</a> (free &mdash; API key optional).
+            <strong style="color: var(--text);">Personal use only</strong> per CoinPaprika&rsquo;s terms &mdash; commercial redistribution is not permitted.
+            See <a href="https://api.coinpaprika.com/" target="_blank" style="color: var(--accent);">API docs</a> for rate limit details and
+            <a href="https://coinpaprika.com/terms-of-use/" target="_blank" style="color: var(--accent);">Terms of Use</a>.
           </p>
         </div>
 

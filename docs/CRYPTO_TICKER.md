@@ -61,30 +61,11 @@ Example: fetch every 60 min, display every 5 min — prices show frequently usin
 
 ### API Key (Optional)
 
-CoinPaprika supports unauthenticated access and an optional free registered API key:
+CoinPaprika supports unauthenticated access and an optional free registered API key. Using a key is recommended to avoid IP-based limits and to get account-level tracking.
 
-| Mode | Limit | Rate Limiting |
-|---|---|---|
-| No key (unauthenticated) | **1,000 requests/day** per IP | IP-based |
-| Free registered key | **20,000 requests/month** | Account-based |
-
-Register a free key at [coinpaprika.com/api](https://coinpaprika.com/api/). Leave the field empty to use unauthenticated access.
+Register a free key at [coinpaprika.com/api](https://coinpaprika.com/api/). Leave the field empty to use unauthenticated access. For current rate limit details, see the [CoinPaprika API documentation](https://api.coinpaprika.com/).
 
 > **User-Agent:** Each device sends a unique `ESP32HTTPClient-{ChipID}` User-Agent. This prevents the shared firmware from triggering a global User-Agent block at CoinPaprika — each physical device is identified distinctly.
-
-### Rate Limit Reference
-
-The ticker makes **one request per coin per fetch cycle**:
-
-| Coins | Fetch Interval | Calls/day | Mode |
-|---|---|---|---|
-| 2 | 30 min | 96 | No key needed |
-| 5 | 30 min | 240 | No key needed |
-| 10 | 30 min | 480 | No key needed |
-| 10 | 15 min | 960 | No key needed (just under 1,000/day) |
-| 10 | 15 min sustained | >1,000 | **Key required** |
-
-Default (2 coins, 30 min) uses 96 calls/day — well within either tier.
 
 ### Scroll Repetitions
 
@@ -99,15 +80,20 @@ Independent brightness level (0–15) for the crypto display, separate from the 
 Prices are formatted as:
 
 ```
-BTC: $95,432 | ETH: $3,210 | SOL: $185.32
+BTC: $95,432 | ETH: $3,210 | SOL: $185.32   (USD)
+BTC: £95,432 | ETH: £3,210 | SOL: £185.32   (GBP)
+BTC: €95,432 | ETH: €3,210 | SOL: €185.32   (EUR)
+BTC: ¥95,432 | ETH: ¥3,210 | SOL: ¥185.32   (JPY)
+BTC: BTC 1.00 | ETH: BTC 0.031             (BTC)
 ```
 
 - Coin label = ticker symbol from API response (e.g. `BTC`, `ETH`)
+- Currency prefix: `$` (USD), `£` (GBP), `€` (EUR), `¥` (JPY), `BTC ` (BTC), `ETH ` (ETH)
 - Price precision scales automatically:
-  - ≥ $1,000 → no decimal (e.g. `$95432`)
-  - ≥ $100 → 1 decimal (e.g. `$234.5`)
-  - ≥ $1 → 2 decimals (e.g. `$3.21`)
-  - < $1 → 4 decimals (e.g. `$0.0012`)
+  - ≥ $1,000 → no decimal (e.g. `£95432`)
+  - ≥ $100 → 1 decimal (e.g. `£234.5`)
+  - ≥ $1 → 2 decimals (e.g. `£3.21`)
+  - < $1 → 4 decimals (e.g. `£0.0012`)
 
 ## Build Flags
 
@@ -164,7 +150,7 @@ This file is included in the full config export/import (`/exportconfig`, `/impor
 
 **Personal Use Only:** This is a hobbyist project created for educational and personal purposes. In accordance with [CoinPaprika's Terms of Use](https://coinpaprika.com/terms-of-use/):
 - This software does not support commercial redistribution.
-- Users are responsible for adhering to the free plan rate limits (20,000 requests/month).
+- Users are responsible for adhering to CoinPaprika's applicable rate limits — see the [API documentation](https://api.coinpaprika.com/) for current plan details.
 - Any individual or entity selling hardware pre-loaded with this software is responsible for securing a commercial/Enterprise license from CoinPaprika.
 
 **Liability:** The developer of this project is not responsible for any API bans, financial losses, or legal actions taken by third-party data providers against the user.
